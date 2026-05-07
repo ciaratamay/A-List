@@ -468,6 +468,41 @@ function resetUIState(){
   modal_deleteLocalId=null;modal_extra=null;
 }
 
+/* ── ONE-TIME MIGRATION FROM OLD SINGLE-LIST FORMAT ── */
+(function migrateOldData(){
+  if(localStorage.getItem('sl_migrated_v2')) return; // already done
+  const oldItems = localStorage.getItem('sl_items');
+  if(!oldItems) return; // no old data
+  try{
+    const items     = JSON.parse(oldItems)||[];
+    const shopTabs  = JSON.parse(localStorage.getItem('sl_shops')||'[]');
+    const cats      = JSON.parse(localStorage.getItem('sl_cats')||'[]');
+    const todoItems = JSON.parse(localStorage.getItem('sl_todo')||'[]');
+    if(!items.length && !todoItems.length) return;
+    const localId = 'list_migrated';
+    const name = 'My List (recovered)';
+    const meta = {localId,name,listId:null,pwHash:null,pwHint:null,isShared:false,lastOpened:Date.now()};
+    const normCatsMig = cats.includes('Uncategorised')
+      ? ['Uncategorised',...cats.filter(c=>c!=='Uncategorised')]
+      : ['Uncategorised',...cats];
+    const defaultShops = [{id:'supervalu',label:'SuperValu',type:'shop'},{id:'aldi',label:'Aldi',type:'shop'}];
+    const finalShops = shopTabs.length ? shopTabs : defaultShops;
+    const nextId = Math.max(0,...items.map(i=>i.id||0))+1;
+    const nextTodoId = Math.max(0,...todoItems.map(t=>t.id||0))+1;
+    // Only migrate if not already present
+    const existing = JSON.parse(localStorage.getItem('sl_all_lists')||'[]');
+    if(!existing.find(l=>l.localId===localId)){
+      existing.push(meta);
+      localStorage.setItem('sl_all_lists', JSON.stringify(existing));
+      localStorage.setItem('sl_list_'+localId, JSON.stringify({
+        items, shopTabs:finalShops, cats:normCatsMig, todoItems, nextId, nextTodoId
+      }));
+    }
+    localStorage.setItem('sl_migrated_v2','1');
+  }catch(e){ console.warn('Migration failed:',e); }
+})();
+
+/* ── RESTORE LAST OPEN LIST ── */
 if(activeLocalId&&allLists.find(l=>l.localId===activeLocalId)){
   list=loadListFromStorage(activeLocalId);
 }
