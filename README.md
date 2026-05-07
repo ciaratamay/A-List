@@ -18,6 +18,8 @@ Share your list quickly in text form: share any list you're in (all shopping or 
 
 Or share yourlist by adding a password. Anyone can access and share - updating across shared versions - as long as they have the unique ID and password you created.
 
+Create themes for your shopping list app. Use a few pre-loaded or export the template (copies the list of colourable areas and their sample colours to your clipboard) which you can then paste in the box (import template) editing any colours you wish. 
+
 
 
 
