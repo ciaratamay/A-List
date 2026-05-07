@@ -1056,6 +1056,7 @@ function renderBurger(){
     <div class="burger-section-label">App</div>
     <div class="burger-item" onclick="_openModal('themes');_closeBurger()"><span class="burger-item-icon">🎨</span><span>Themes</span></div>
     <div class="burger-item" onclick="_openHelp();_closeBurger()"><span class="burger-item-icon">❓</span><span>Help</span></div>
+    <div class="burger-item" onclick="_retryMigration();_closeBurger()"><span class="burger-item-icon">🔄</span><span>Recover old list</span></div>
     <div class="burger-item danger" onclick="_doQuit()"><span class="burger-item-icon">⏻</span><span>Quit</span></div>
   </div>`;
 }
@@ -1079,6 +1080,38 @@ window._closeManageModal=()=>{confirmDelete=null;modal=null;render()};
 window._openBurger=()=>{burgerOpen=true;render()};
 window._closeBurger=()=>{burgerOpen=false;render()};
 window._doQuit=()=>window.close();
+
+window._retryMigration=()=>{
+  localStorage.removeItem('sl_migrated_v2');
+  const oldItems=localStorage.getItem('sl_items');
+  if(!oldItems){
+    alert('No old list data found on this device. The data may have been on a different device or browser.');
+    return;
+  }
+  try{
+    const items=JSON.parse(oldItems)||[];
+    const shopTabs=JSON.parse(localStorage.getItem('sl_shops')||'[]');
+    const cats=JSON.parse(localStorage.getItem('sl_cats')||'[]');
+    const todoItems=JSON.parse(localStorage.getItem('sl_todo')||'[]');
+    const localId='list_migrated_'+Date.now();
+    const name='My List (recovered)';
+    const normCatsMig=cats.includes('Uncategorised')
+      ?['Uncategorised',...cats.filter(c=>c!=='Uncategorised')]
+      :cats.length?['Uncategorised',...cats]:DEFAULT_CATS.slice();
+    const finalShops=shopTabs.length?shopTabs:DEFAULT_SHOPS.map(s=>({...s}));
+    const nextId=Math.max(0,...items.map(i=>i.id||0))+1;
+    const nextTodoId=Math.max(0,...(todoItems.map(t=>t.id||0)||[0]))+1;
+    const meta={localId,name,listId:null,pwHash:null,pwHint:null,isShared:false,lastOpened:Date.now()};
+    allLists.push(meta);
+    ss('sl_all_lists',allLists);
+    ss('sl_list_'+localId,{items,shopTabs:finalShops,cats:normCatsMig,todoItems,nextId,nextTodoId});
+    localStorage.setItem('sl_migrated_v2','1');
+    alert('Done! Found '+items.length+' items. Open "My List (recovered)" from Open / browse lists.');
+    render();
+  }catch(e){
+    alert('Something went wrong reading the old data: '+e.message);
+  }
+};
 window._closeCurrentList=closeCurrentList;
 window._doUndo=()=>popUndo();
 
