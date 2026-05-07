@@ -3,6 +3,8 @@
 ///testing build v 0.2 of my customisable multi-shop, shared grocery list app. No logins / sign ups. 
 Free to use how you like, see licence for details. I'm not responsible for anything that comes from using this testing build of an app on your device. 
 
+Security: Note that I won't be securing things beyond using secure passwords, which I don't have access to, I could probably look at the data in the database if I wanted to- I'm not focused on the security of shopping lists right now so please don't expect these lists to be particularly protected from hackers or anything. I will tighten up everything as and if I get out of testing. As I test things I may mess with and overwrite things which could cause you to lose lists, which I'll try not to do, but be warned. 
+
 Main Purpose:
 To create the shopping list app I wanted.
 I didn't want to write out the items I buy all the time, and have to remember all the different things that are usually on my list.
