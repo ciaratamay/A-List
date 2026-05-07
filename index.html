@@ -870,13 +870,7 @@ function renderModal(){
       <input class="m-input" id="join-pw" type="password" placeholder="Password">
       <div class="m-err" id="join-err"></div>
       <div style="display:flex;gap:8px"><button class="m-btn blue" onclick="_doJoinList()">Join</button><button class="m-btn grey" onclick="_closeModal()">Cancel</button></div>
-      <div class="m-divider"></div>
-      <p style="font-weight:600;color:var(--text);margin-bottom:4px">Force join (owner recovery only)</p>
-      <p>If you created the list and can't get in, enter the ID below to load it without a password check. Only use this if it's your own list.</p>
-      <label class="m-label">List ID</label>
-      <input class="m-input" id="force-id" placeholder="e.g. MyList-A3K9" autocomplete="off">
-      <div class="m-err" id="force-err"></div>
-      <div style="display:flex;gap:8px"><button class="m-btn red" onclick="_doForceJoin()">Force join</button></div>
+
     </div></div>`;
     mbgClose();return;
   }
@@ -1063,7 +1057,6 @@ function renderBurger(){
     <div class="burger-section-label">App</div>
     <div class="burger-item" onclick="_openModal('themes');_closeBurger()"><span class="burger-item-icon">🎨</span><span>Themes</span></div>
     <div class="burger-item" onclick="_openHelp();_closeBurger()"><span class="burger-item-icon">❓</span><span>Help</span></div>
-    <div class="burger-item" onclick="_retryMigration();_closeBurger()"><span class="burger-item-icon">🔄</span><span>Recover old list</span></div>
     <div class="burger-item danger" onclick="_doQuit()"><span class="burger-item-icon">⏻</span><span>Quit</span></div>
   </div>`;
 }
@@ -1088,62 +1081,7 @@ window._openBurger=()=>{burgerOpen=true;render()};
 window._closeBurger=()=>{burgerOpen=false;render()};
 window._doQuit=()=>window.close();
 
-window._doForceJoin=async()=>{
-  const idEl=document.getElementById('force-id');
-  const errEl=document.getElementById('force-err');
-  const listId=idEl?.value.trim();
-  if(!listId){if(errEl)errEl.textContent='Enter a list ID.';return;}
-  if(errEl)errEl.textContent='Loading…';
-  try{
-    const snap=await getDoc(doc(db,'lists',listId));
-    if(!snap.exists()){if(errEl)errEl.textContent='List not found. Check the ID.';return;}
-    const data=snap.data();
-    const localId='list_'+Date.now();
-    const name=data.name||listId;
-    const cats=data.cats||DEFAULT_CATS.slice();
-    list={localId,name,listId,pwHash:data.pwHash||null,pwHint:null,isShared:true,
-      items:data.items||[],shopTabs:data.shopTabs||DEFAULT_SHOPS.map(s=>({...s})),
-      cats:normCats(cats),todoItems:data.todoItems||[],
-      nextId:data.nextId||1,nextTodoId:data.nextTodoId||1};
-    allLists.push({localId,name,listId,pwHash:data.pwHash||null,pwHint:null,isShared:true,lastOpened:Date.now()});
-    ss('sl_all_lists',allLists);
-    ss('sl_list_'+localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
-    activeLocalId=localId;ss('sl_active_local',localId);
-    resetUIState();subscribeFirestore(listId);render();
-  }catch(e){if(errEl)errEl.textContent='Error: '+e.message;}
-};
 
-window._retryMigration=()=>{
-  localStorage.removeItem('sl_migrated_v2');
-  const oldItems=localStorage.getItem('sl_items');
-  if(!oldItems){
-    alert('No old list data found on this device. The data may have been on a different device or browser.');
-    return;
-  }
-  try{
-    const items=JSON.parse(oldItems)||[];
-    const shopTabs=JSON.parse(localStorage.getItem('sl_shops')||'[]');
-    const cats=JSON.parse(localStorage.getItem('sl_cats')||'[]');
-    const todoItems=JSON.parse(localStorage.getItem('sl_todo')||'[]');
-    const localId='list_migrated_'+Date.now();
-    const name='My List (recovered)';
-    const normCatsMig=cats.includes('Uncategorised')
-      ?['Uncategorised',...cats.filter(c=>c!=='Uncategorised')]
-      :cats.length?['Uncategorised',...cats]:DEFAULT_CATS.slice();
-    const finalShops=shopTabs.length?shopTabs:DEFAULT_SHOPS.map(s=>({...s}));
-    const nextId=Math.max(0,...items.map(i=>i.id||0))+1;
-    const nextTodoId=Math.max(0,...(todoItems.map(t=>t.id||0)||[0]))+1;
-    const meta={localId,name,listId:null,pwHash:null,pwHint:null,isShared:false,lastOpened:Date.now()};
-    allLists.push(meta);
-    ss('sl_all_lists',allLists);
-    ss('sl_list_'+localId,{items,shopTabs:finalShops,cats:normCatsMig,todoItems,nextId,nextTodoId});
-    localStorage.setItem('sl_migrated_v2','1');
-    alert('Done! Found '+items.length+' items. Open "My List (recovered)" from Open / browse lists.');
-    render();
-  }catch(e){
-    alert('Something went wrong reading the old data: '+e.message);
-  }
-};
 window._closeCurrentList=closeCurrentList;
 window._doUndo=()=>popUndo();
 
