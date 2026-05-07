@@ -1,5 +1,6 @@
 # A-List
-testing build of my customisable multi-shop, shared grocery list app. No logins / sign ups. 
+
+///testing build v 0.2 of my customisable multi-shop, shared grocery list app. No logins / sign ups. 
 Free to use how you like, see licence for details. I'm not responsible for anything that comes from using this testing build of an app on your device. 
 
 Main Purpose:
