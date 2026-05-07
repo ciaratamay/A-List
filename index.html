@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Shopping List">
+<link rel="manifest" href="manifest.json">
+<title>Shopping List</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#fff; --bg2:#f5f5f5; --bg3:#ececec;
+  --text:#111; --muted:#666;
+  --border:rgba(0,0,0,0.1); --border-md:rgba(0,0,0,0.2);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1e; --bg2:#2c2c2e; --bg3:#3a3a3c;
+    --text:#f2f2f7; --muted:#8e8e93;
+    --border:rgba(255,255,255,0.1); --border-md:rgba(255,255,255,0.2);
+  }
+}
+html,body{ background:var(--bg); color:var(--text); }
+body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:16px; line-height:1.4; -webkit-text-size-adjust:100%; }
+#app{ max-width:600px; margin:0 auto; padding-bottom:80px; min-height:100vh; }
+
+/* HEADER */
+.app-header{ position:sticky; top:0; background:var(--bg); z-index:20; border-bottom:0.5px solid var(--border); }
+.header-row{ display:flex; align-items:center; padding:10px 12px 8px; gap:10px; }
+.header-title{ flex:1; font-size:15px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header-listid{ font-size:10px; color:var(--muted); font-family:monospace; display:block; margin-top:1px; }
+.burger-btn{ background:none; border:none; cursor:pointer; color:var(--text); font-size:22px; line-height:1; -webkit-tap-highlight-color:transparent; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; }
+.share-btn{ font-size:12px; padding:5px 11px; border-radius:20px; border:0.5px solid var(--border-md); background:transparent; color:var(--muted); cursor:pointer; font-weight:600; white-space:nowrap; -webkit-tap-highlight-color:transparent; flex-shrink:0; }
+.share-btn.shared{ background:#185FA5; color:#fff; border-color:#185FA5; }
+.tabs-row{ display:flex; overflow-x:auto; scrollbar-width:none; padding:0 10px; gap:2px; }
+.tabs-row::-webkit-scrollbar{ display:none; }
+.tab{ flex-shrink:0; padding:9px 14px; font-size:14px; border-radius:8px 8px 0 0; border:0.5px solid transparent; cursor:pointer; background:transparent; color:var(--muted); white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+.tab.active{ background:var(--bg); border-color:var(--border); border-bottom-color:var(--bg); color:var(--text); font-weight:600; }
+.badge{ font-size:11px; background:#E6F1FB; color:#0C447C; border-radius:10px; padding:1px 6px; margin-left:4px; font-weight:600; }
+
+/* SYNC BAR */
+.sync-bar{ display:flex; align-items:center; gap:8px; padding:5px 12px; background:var(--bg2); border-bottom:0.5px solid var(--border); font-size:12px; color:var(--muted); }
+.sync-dot{ width:7px; height:7px; border-radius:50%; background:#999; flex-shrink:0; }
+.sync-dot.live{ background:#3B6D11; }
+.sync-dot.error{ background:#A32D2D; }
+.sync-dot.syncing{ background:#854F0B; animation:pulse 1s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1}50%{opacity:0.35} }
+
+/* TOOLBAR */
+.toolbar{ display:flex; gap:8px; align-items:center; padding:10px 12px 8px; flex-wrap:wrap; }
+.sort-btn{ font-size:13px; padding:6px 12px; border:0.5px solid var(--border-md); border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.sort-btn.on{ background:var(--bg2); color:var(--text); font-weight:600; }
+.tool-btn{ font-size:13px; padding:6px 12px; border-radius:8px; cursor:pointer; -webkit-tap-highlight-color:transparent; border:none; font-weight:600; color:#fff; }
+.tool-btn.red{ background:#A32D2D; }
+.tool-btn.muted{ background:transparent; color:var(--muted); border:0.5px solid var(--border-md); }
+.tool-btn.muted:hover{ background:var(--bg2); }
+
+/* ACTION STRIP */
+.action-strip{ display:flex; gap:8px; padding:8px 12px; border-bottom:0.5px solid var(--border); flex-wrap:wrap; }
+.act-btn{ font-size:13px; padding:7px 13px; border:none; border-radius:8px; cursor:pointer; font-weight:600; color:#fff; -webkit-tap-highlight-color:transparent; }
+.act-btn.blue{ background:#185FA5; }
+.act-btn.grey{ background:#555; }
+.act-btn.amber{ background:#854F0B; }
+.act-btn.done{ background:#3B6D11 !important; }
+
+/* LOG */
+.log-banner{ margin:10px 12px; padding:12px 14px; background:var(--bg2); border-radius:8px; border:0.5px solid var(--border-md); font-size:13px; color:var(--text); line-height:1.7; }
+.log-undo{ display:inline-block; margin-top:8px; font-size:12px; padding:5px 12px; background:#854F0B; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+
+/* ITEMS */
+.sec-head{ padding:8px 14px 4px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; }
+.item-row{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-top:0.5px solid var(--border); background:var(--bg); min-height:52px; }
+.item-info{ flex:1; min-width:0; }
+.item-name{ font-size:16px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-name.needed{ font-weight:600; }
+.shop-tags{ display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.shop-tag{ font-size:11px; padding:2px 7px; border-radius:10px; background:var(--bg2); color:var(--muted); border:0.5px solid var(--border); }
+.toggle{ width:48px; height:28px; border-radius:14px; border:none; cursor:pointer; position:relative; flex-shrink:0; transition:background 0.2s; -webkit-tap-highlight-color:transparent; }
+.toggle::after{ content:''; position:absolute; width:22px; height:22px; border-radius:50%; background:#fff; top:3px; left:3px; transition:transform 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.3); }
+.toggle.on::after{ transform:translateX(20px); }
+.icon-btn{ background:none; border:none; cursor:pointer; color:var(--muted); font-size:18px; padding:6px; flex-shrink:0; line-height:1; -webkit-tap-highlight-color:transparent; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; }
+.confirm-row{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:0.5px solid var(--border); background:#5a1a1a; flex-wrap:wrap; }
+.confirm-msg{ flex:1; font-size:14px; color:#ffcccc; min-width:140px; }
+.cy{ font-size:13px; padding:7px 14px; background:#A32D2D; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+.cn{ font-size:13px; padding:7px 14px; background:#555; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+
+/* EDIT PANEL */
+.edit-panel{ background:var(--bg2); border-top:0.5px solid var(--border); padding:14px; }
+.edit-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px; }
+.edit-input{ width:100%; font-size:15px; padding:9px 11px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg); color:var(--text); margin-bottom:12px; appearance:none; -webkit-appearance:none; }
+.edit-input:focus{ outline:none; border-color:#185FA5; }
+.shop-checks{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.sc{ font-size:13px; padding:6px 13px; border:0.5px solid var(--border-md); border-radius:20px; cursor:pointer; background:var(--bg); color:var(--text); user-select:none; -webkit-tap-highlight-color:transparent; }
+.sc.on{ background:#185FA5; color:#fff; border-color:#185FA5; }
+.edit-save{ font-size:14px; padding:9px 18px; background:#185FA5; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+.edit-cancel{ font-size:14px; padding:9px 16px; background:var(--bg2); border:0.5px solid var(--border-md); border-radius:8px; cursor:pointer; color:var(--text); }
+
+/* ADD */
+.add-area{ padding:12px 14px; border-top:0.5px solid var(--border); }
+.add-row{ display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; }
+.add-input{ flex:1; font-size:15px; padding:9px 11px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg); color:var(--text); min-width:120px; appearance:none; -webkit-appearance:none; }
+.add-input:focus{ outline:none; border-color:#185FA5; }
+.cat-sel{ font-size:13px; padding:9px 7px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg); color:var(--text); max-width:130px; appearance:none; -webkit-appearance:none; }
+.add-ok{ background:#3B6D11; color:#fff; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; font-size:20px; font-weight:700; flex-shrink:0; min-width:44px; min-height:44px; }
+.add-shop-row{ display:flex; flex-wrap:wrap; gap:6px; padding:6px 0 2px; width:100%; }
+.add-sc{ font-size:12px; padding:4px 10px; border:0.5px solid var(--border-md); border-radius:12px; cursor:pointer; background:var(--bg); color:var(--text); user-select:none; -webkit-tap-highlight-color:transparent; }
+.add-sc.on{ background:#185FA5; color:#fff; border-color:#185FA5; }
+
+/* TO DO */
+.todo-add-area{ padding:12px 14px; border-top:0.5px solid var(--border); display:flex; gap:8px; }
+.todo-input{ flex:1; font-size:15px; padding:9px 11px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg); color:var(--text); appearance:none; -webkit-appearance:none; }
+.todo-input:focus{ outline:none; border-color:#185FA5; }
+.todo-add-ok{ background:#3B6D11; color:#fff; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; font-size:20px; font-weight:700; min-width:44px; min-height:44px; }
+.todo-row{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-top:0.5px solid var(--border); background:var(--bg); min-height:52px; }
+.todo-check{ width:24px; height:24px; border-radius:6px; border:1.5px solid #999; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:transparent; font-size:13px; color:transparent; -webkit-tap-highlight-color:transparent; transition:all 0.15s; }
+.todo-check.ticked{ background:#3B6D11; border-color:#3B6D11; color:#fff; }
+.todo-text{ flex:1; font-size:16px; color:var(--text); }
+.todo-text.ticked{ text-decoration:line-through; color:var(--muted); }
+
+/* MANAGE */
+.manage-section{ margin-top:24px; border:0.5px solid var(--border-md); border-radius:12px; overflow:hidden; }
+.manage-section-head{ padding:12px 14px 10px; background:var(--bg2); border-bottom:0.5px solid var(--border-md); font-size:13px; font-weight:600; color:var(--text); }
+.manage-section-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
+.manage-row{ display:flex; gap:8px; align-items:center; }
+.manage-input{ font-size:14px; padding:8px 10px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg); color:var(--text); flex:1; appearance:none; -webkit-appearance:none; }
+.manage-btn{ font-size:13px; padding:8px 12px; background:#3B6D11; color:#fff; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; }
+.chip-list{ display:flex; flex-wrap:wrap; gap:6px; }
+.chip{ display:flex; align-items:center; gap:4px; font-size:13px; padding:5px 10px; border:0.5px solid var(--border-md); border-radius:20px; background:var(--bg2); color:var(--text); }
+.chip-del{ background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; padding:0 2px; line-height:1; }
+.chip-del:hover{ color:#A32D2D; }
+.divider{ height:0.5px; background:var(--border); margin:8px 0; }
+.empty{ padding:32px 14px; text-align:center; color:var(--muted); font-size:15px; }
+
+/* NO LIST SCREEN */
+.no-list-screen{ display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; gap:16px; text-align:center; min-height:70vh; }
+.no-list-title{ font-size:22px; font-weight:700; color:var(--text); }
+.no-list-sub{ font-size:15px; color:var(--muted); line-height:1.5; max-width:280px; }
+.no-list-btn{ font-size:15px; padding:13px 28px; background:#185FA5; color:#fff; border:none; border-radius:12px; cursor:pointer; font-weight:600; -webkit-tap-highlight-color:transparent; }
+.no-list-btn.secondary{ background:var(--bg2); color:var(--text); border:0.5px solid var(--border-md); }
+
+/* BURGER */
+.burger-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; }
+.burger-panel{ position:fixed; top:0; right:0; bottom:0; width:min(300px,85vw); background:var(--bg); z-index:201; display:flex; flex-direction:column; box-shadow:-4px 0 20px rgba(0,0,0,0.2); overflow-y:auto; }
+.burger-header{ padding:20px 16px 14px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--bg); }
+.burger-header-title{ font-size:17px; font-weight:700; }
+.burger-close{ background:none; border:none; font-size:22px; color:var(--muted); cursor:pointer; line-height:1; }
+.burger-section{ padding:12px 16px 4px; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.07em; }
+.burger-item{ display:flex; align-items:center; padding:13px 16px; font-size:15px; color:var(--text); cursor:pointer; -webkit-tap-highlight-color:transparent; border:none; background:none; width:100%; text-align:left; gap:12px; }
+.burger-item:active{ background:var(--bg2); }
+.burger-item.active-list{ color:#185FA5; }
+.burger-item.danger{ color:#A32D2D; }
+.burger-icon{ font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+.burger-list-name{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:inherit; }
+.burger-list-tag{ font-size:10px; padding:2px 7px; border-radius:10px; font-weight:600; }
+.burger-list-tag.shared{ background:#185FA5; color:#fff; }
+.burger-list-tag.active{ background:#E6F1FB; color:#0C447C; }
+.burger-divider{ height:0.5px; background:var(--border); margin:4px 16px; }
+
+/* MODALS */
+.modal-bg{ position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; display:flex; align-items:flex-end; }
+.modal{ background:var(--bg); border-radius:16px 16px 0 0; padding:20px 16px 36px; width:100%; max-height:85vh; overflow-y:auto; }
+.modal h3{ font-size:16px; font-weight:600; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+.modal-close{ background:none; border:none; font-size:22px; color:var(--muted); cursor:pointer; line-height:1; padding:0; }
+.modal p{ font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.5; }
+.modal-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px; display:block; }
+.modal-input{ width:100%; font-size:15px; padding:10px 12px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg2); color:var(--text); margin-bottom:12px; appearance:none; -webkit-appearance:none; }
+.modal-input:focus{ outline:none; border-color:#185FA5; }
+.modal textarea{ width:100%; font-size:14px; font-family:inherit; padding:12px; border:0.5px solid var(--border-md); border-radius:8px; background:var(--bg2); color:var(--text); min-height:120px; resize:vertical; appearance:none; }
+.modal textarea:focus{ outline:none; border-color:#185FA5; }
+.modal-opts{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+.modal-go{ font-size:14px; padding:9px 20px; background:#185FA5; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+.modal-go.green{ background:#3B6D11; }
+.modal-go.red{ background:#A32D2D; }
+.modal-secondary{ font-size:14px; padding:9px 16px; background:var(--bg2); border:0.5px solid var(--border-md); border-radius:8px; cursor:pointer; color:var(--text); }
+.modal-err{ font-size:13px; color:#A32D2D; margin-top:8px; padding:8px 10px; background:rgba(163,45,45,0.1); border-radius:6px; }
+.modal-hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+.modal-id-box{ background:var(--bg2); border:0.5px solid var(--border-md); border-radius:8px; padding:12px 14px; font-size:17px; font-family:monospace; letter-spacing:0.08em; color:var(--text); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:700; }
+.modal-copy-btn{ font-size:12px; padding:5px 12px; background:#185FA5; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; white-space:nowrap; flex-shrink:0; }
+.override-toggle{ font-size:13px; padding:7px 13px; border:0.5px solid var(--border-md); border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
+.override-toggle.on{ background:#854F0B; color:#fff; border-color:#854F0B; }
+.list-picker-item{ display:flex; align-items:center; padding:12px 0; border-top:0.5px solid var(--border); gap:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.list-picker-item:first-child{ border-top:none; }
+.list-picker-name{ flex:1; font-size:15px; color:var(--text); }
+.list-picker-meta{ font-size:11px; color:var(--muted); font-family:monospace; margin-top:2px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header-el"></div>
+  <div id="sync-bar-el"></div>
+  <div id="body-el"></div>
+  <div id="modal-el"></div>
+  <div id="burger-el"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAdWxHB70MKKoZzIchLNWpPTP5XNvJhDSc",
+  authDomain: "ciaras-shopping-list-app.firebaseapp.com",
+  projectId: "ciaras-shopping-list-app",
+  storageBucket: "ciaras-shopping-list-app.firebasestorage.app",
+  messagingSenderId: "772298705876",
+  appId: "1:772298705876:web:d6b38a89803d1ef6f8e441"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+/* ══════════════════════════════════
+   CONSTANTS
+══════════════════════════════════ */
+const DEFAULT_CATS  = ['Uncategorised','Refrigerated','Fruit & Veg','Store Cupboard','Frozen','Snacks'];
+const DEFAULT_SHOPS = [
+  {id:'supervalu',label:'SuperValu',type:'shop'},
+  {id:'aldi',     label:'Aldi',     type:'shop'}
+];
+const DEFAULT_ITEMS = [
+  {id:1, name:'Milk',     cat:'Refrigerated', shops:[],            needed:false},
+  {id:2, name:'Mango',    cat:'Frozen',        shops:['aldi'],      needed:false},
+  {id:3, name:'Beetroot', cat:'Fruit & Veg',   shops:['supervalu'], needed:false},
+];
+const BASE_TABS = [
+  {id:'all',  label:'All Shopping', type:'all'},
+  {id:'todo', label:'To Do',        type:'todo'}
+];
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/* ══════════════════════════════════
+   HELPERS
+══════════════════════════════════ */
+function ls(k,d){try{const v=localStorage.getItem(k);return v!=null?JSON.parse(v):d}catch{return d}}
+function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function randChars(n){let s='';for(let i=0;i<n;i++)s+=CHARS[Math.floor(Math.random()*CHARS.length)];return s;}
+
+function generateListId(name){
+  let slug = name.trim().replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,'');
+  if(!slug) slug='list';
+  const baseLen = slug.replace(/-/g,'').length;
+  const suffixLen = baseLen <= 4 ? Math.max(4, 8 - baseLen) : 4;
+  return slug + '-' + randChars(suffixLen);
+}
+
+async function hashPassword(pw){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ══════════════════════════════════
+   REGISTRY  — index of all local lists
+   [{localId, name, listId|null, isShared}]
+══════════════════════════════════ */
+let registry      = ls('sl_registry', []);
+let currentLocalId = ls('sl_current', null);
+
+/* ══════════════════════════════════
+   CURRENT LIST STATE
+══════════════════════════════════ */
+let items     = [];
+let shopTabs  = [];
+let cats      = [];
+let todoItems = [];
+let nextId    = 1;
+let nextTodoId= 1;
+
+/* UI state */
+let activeTab      = 'all';
+let sortAlpha      = false;
+let confirmId      = null;
+let confirmClear   = false;
+let confirmDelete  = null;
+let confirmTodoDel = null;
+let editId         = null;
+let editDraft      = null;
+let addDraftShops  = [];
+let pendingAdd     = null;
+let logLines       = [];
+let undoSnap       = null;
+let modal          = null;
+let importOverride = false;
+let burgerOpen     = false;
+
+/* Sync state */
+let syncStatus          = 'off';
+let firestoreUnsub      = null;
+let isSyncingFromRemote = false;
+
+/* ══════════════════════════════════
+   LIST DATA LOAD/SAVE
+══════════════════════════════════ */
+function currentReg(){ return registry.find(r=>r.localId===currentLocalId)||null; }
+
+function normCats(){
+  cats = cats.filter(c=>c!=='Uncategorised');
+  cats.unshift('Uncategorised');
+}
+
+function loadListData(localId){
+  const data = ls('sl_list_'+localId, null);
+  if(data){
+    items     = data.items     || clone(DEFAULT_ITEMS);
+    shopTabs  = data.shopTabs  || clone(DEFAULT_SHOPS);
+    cats      = data.cats      || DEFAULT_CATS.slice();
+    todoItems = data.todoItems || [];
+  } else {
+    items     = clone(DEFAULT_ITEMS);
+    shopTabs  = clone(DEFAULT_SHOPS);
+    cats      = DEFAULT_CATS.slice();
+    todoItems = [];
+  }
+  normCats();
+  nextId     = Math.max(0,...items.map(i=>i.id))+1;
+  nextTodoId = Math.max(0,...(todoItems.map(t=>t.id||0).concat([0])))+1;
+}
+
+function saveListData(){
+  if(!currentLocalId) return;
+  ss('sl_list_'+currentLocalId, {items,shopTabs,cats,todoItems});
+}
+
+function saveAll(){
+  saveListData();
+  const reg = currentReg();
+  if(reg && reg.isShared && reg.listId) pushToFirestore(reg.listId);
+}
+
+/* ══════════════════════════════════
+   OPEN / CREATE / DELETE
+══════════════════════════════════ */
+function resetUIState(){
+  confirmId=null; confirmClear=false; confirmDelete=null; confirmTodoDel=null;
+  editId=null; editDraft=null; addDraftShops=[]; pendingAdd=null;
+  logLines=[]; undoSnap=null; sortAlpha=false; activeTab='all';
+}
+
+function openList(localId){
+  disconnectSync();
+  currentLocalId = localId;
+  ss('sl_current', localId);
+  resetUIState();
+  loadListData(localId);
+  const reg = registry.find(r=>r.localId===localId);
+  if(reg && reg.isShared && reg.listId){
+    subscribeToSharedList(reg.listId, localId);
+  }
+  burgerOpen = false;
+  render();
+}
+
+function createList(name){
+  const localId = 'list_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  registry.push({localId, name, listId:null, isShared:false});
+  ss('sl_registry', registry);
+  ss('sl_list_'+localId, {
+    items: clone(DEFAULT_ITEMS),
+    shopTabs: clone(DEFAULT_SHOPS),
+    cats: DEFAULT_CATS.slice(),
+    todoItems: []
+  });
+  openList(localId);
+}
+
+function deleteList(localId){
+  registry = registry.filter(r=>r.localId!==localId);
+  ss('sl_registry', registry);
+  try{ localStorage.removeItem('sl_list_'+localId); }catch{}
+  if(currentLocalId===localId){
+    disconnectSync();
+    currentLocalId = null;
+    ss('sl_current', null);
+    items=[]; shopTabs=[]; cats=[]; todoItems=[];
+  }
+}
+
+/* ══════════════════════════════════
+   FIRESTORE
+══════════════════════════════════ */
+function getPayload(){ return {items, shopTabs, cats, todoItems, updatedAt: Date.now()}; }
+
+async function pushToFirestore(listId){
+  if(isSyncingFromRemote) return;
+  syncStatus='syncing'; renderSyncBar();
+  try{
+    await setDoc(doc(db,'lists',listId), getPayload());
+    syncStatus='live'; renderSyncBar();
+  }catch(e){
+    console.error('Firestore write',e);
+    syncStatus='error'; renderSyncBar();
+  }
+}
+
+function subscribeToSharedList(listId, localId){
+  if(firestoreUnsub){ firestoreUnsub(); firestoreUnsub=null; }
+  syncStatus='syncing'; renderSyncBar();
+  firestoreUnsub = onSnapshot(doc(db,'lists',listId), snap=>{
+    if(currentLocalId!==localId) return;
+    if(!snap.exists()){ syncStatus='error'; renderSyncBar(); return; }
+    const data = snap.data();
+    isSyncingFromRemote = true;
+    if(data.items)     items     = data.items;
+    if(data.shopTabs)  shopTabs  = data.shopTabs;
+    if(data.cats){     cats      = data.cats; normCats(); }
+    if(data.todoItems) todoItems = data.todoItems;
+    nextId     = Math.max(0,...items.map(i=>i.id))+1;
+    nextTodoId = Math.max(0,...(todoItems.map(t=>t.id||0).concat([0])))+1;
+    saveListData();
+    syncStatus='live';
+    isSyncingFromRemote = false;
+    render();
+  }, err=>{
+    console.error('Firestore listen',err);
+    syncStatus='error'; renderSyncBar();
+  });
+}
+
+function disconnectSync(){
+  if(firestoreUnsub){ firestoreUnsub(); firestoreUnsub=null; }
+  syncStatus='off';
+}
+
+async function enableSharing(password){
+  const reg = currentReg();
+  if(!reg) return null;
+  const hash = await hashPassword(password);
+  const listId = generateListId(reg.name);
+  await setDoc(doc(db,'lists',listId), {...getPayload(), pwHash: hash});
+  reg.listId = listId;
+  reg.isShared = true;
+  ss('sl_registry', registry);
+  subscribeToSharedList(listId, currentLocalId);
+  return listId;
+}
+
+async function joinSharedList(listId, password){
+  const snap = await getDoc(doc(db,'lists',listId));
+  if(!snap.exists()) throw new Error('List not found. Check the ID.');
+  const data = snap.data();
+  const hash = await hashPassword(password);
+  if(data.pwHash !== hash) throw new Error('Wrong password.');
+  let reg = registry.find(r=>r.listId===listId);
+  if(!reg){
+    const localId = 'list_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    const name = listId.replace(/-[A-Z0-9]+$/,'').replace(/-/g,' ') || listId;
+    reg = {localId, name, listId, isShared:true};
+    registry.push(reg);
+    ss('sl_registry', registry);
+  }
+  // Seed local data from remote before opening
+  isSyncingFromRemote = true;
+  if(data.items)     items     = data.items;
+  if(data.shopTabs)  shopTabs  = data.shopTabs;
+  if(data.cats){     cats      = data.cats; normCats(); }
+  if(data.todoItems) todoItems = data.todoItems;
+  isSyncingFromRemote = false;
+  ss('sl_list_'+reg.localId, {items,shopTabs,cats,todoItems});
+  openList(reg.localId);
+}
+
+/* ══════════════════════════════════
+   TAB / ITEM HELPERS
+══════════════════════════════════ */
+function allTabs(){ return [...BASE_TABS, ...shopTabs]; }
+function tabById(id){ return allTabs().find(t=>t.id===id); }
+function itemInTab(item, tabId){
+  const tab = tabById(tabId);
+  if(!tab) return false;
+  if(tab.type==='all') return true;
+  if(tab.type==='shop') return item.shops.includes(tabId);
+  return false;
+}
+function neededCount(tabId){
+  if(tabId==='todo') return 0;
+  return items.filter(i=>itemInTab(i,tabId)&&i.needed).length;
+}
+function catList(){ return cats.length ? cats : DEFAULT_CATS.slice(); }
+function normName(s){ return s.trim().charAt(0).toUpperCase()+s.trim().slice(1); }
+function stemWord(s){
+  s=s.toLowerCase().trim();
+  if(s.endsWith('es')) return s.slice(0,-2);
+  if(s.endsWith('s'))  return s.slice(0,-1);
+  return s;
+}
+function findSimilar(name){
+  const stem=stemWord(name);
+  return items.find(i=>{
+    const iLow=i.name.toLowerCase().trim();
+    return iLow===name.toLowerCase().trim() || stemWord(iLow)===stem;
+  })||null;
+}
+
+/* ══════════════════════════════════
+   RENDER
+══════════════════════════════════ */
+function render(){
+  renderHeader();
+  renderSyncBar();
+  renderBody();
+  renderModal();
+  renderBurger();
+}
+
+/* ── Header ── */
+function renderHeader(){
+  const el = document.getElementById('header-el');
+  const reg = currentReg();
+  if(!reg){ el.innerHTML=''; return; }
+  const tabs = allTabs().map(t=>{
+    const n = neededCount(t.id);
+    return`<button class="tab${t.id===activeTab?' active':''}" onclick="A.setTab('${t.id}')">${t.label}${(t.type!=='todo'&&n)?`<span class="badge">${n}</span>`:''}</button>`;
+  }).join('');
+  el.innerHTML=`<div class="app-header">
+    <div class="header-row">
+      <div style="flex:1;min-width:0">
+        <div class="header-title">${escHtml(reg.name)}</div>
+        ${reg.listId?`<span class="header-listid">${reg.listId}</span>`:''}
+      </div>
+      <button class="share-btn${reg.isShared?' shared':''}" onclick="A.openShareModal()">${reg.isShared?'✓ Shared':'Share'}</button>
+      <button class="burger-btn" onclick="A.toggleBurger()">☰</button>
+    </div>
+    <div class="tabs-row">${tabs}</div>
+  </div>`;
+}
+
+/* ── Sync bar ── */
+function renderSyncBar(){
+  const el = document.getElementById('sync-bar-el');
+  if(syncStatus==='off'||!currentLocalId){ el.innerHTML=''; return; }
+  const labels={live:'Live — syncing with housemates',syncing:'Syncing…',error:'Sync error — check connection'};
+  const cls={live:'sync-dot live',syncing:'sync-dot syncing',error:'sync-dot error'}[syncStatus]||'sync-dot';
+  el.innerHTML=`<div class="sync-bar"><span class="${cls}"></span><span>${labels[syncStatus]||''}</span></div>`;
+}
+
+/* ── Body ── */
+function renderBody(){
+  const el = document.getElementById('body-el');
+  if(!currentLocalId){
+    el.innerHTML=`<div class="no-list-screen">
+      <div class="no-list-title">No list open</div>
+      <div class="no-list-sub">Create a new list or open an existing one.</div>
+      <button class="no-list-btn" onclick="A.openModal('new-list')">+ New list</button>
+      ${registry.length?`<button class="no-list-btn secondary" onclick="A.openModal('open-list')">Open list</button>`:''}
+    </div>`;
+    return;
+  }
+  if(activeTab==='todo'){
+    el.innerHTML = buildTodoHtml();
+    document.getElementById('todo-add-btn').addEventListener('click', A.addTodo);
+    document.getElementById('todo-new').addEventListener('keydown',e=>{if(e.key==='Enter')A.addTodo()});
+    return;
+  }
+  el.innerHTML = buildShoppingHtml();
+  bindShoppingEvents();
+}
+
+function buildShoppingHtml(){
+  const tab = tabById(activeTab);
+  const visible = items.filter(i=>itemInTab(i,activeTab)).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  const needed    = visible.filter(i=>i.needed);
+  const notNeeded = visible.filter(i=>!i.needed);
+  let h='';
+
+  h+=`<div class="toolbar">
+    <button class="sort-btn${!sortAlpha?' on':''}" onclick="A.setSort(false)">Needed first</button>
+    <button class="sort-btn${sortAlpha?' on':''}" onclick="A.setSort(true)">A–Z</button>
+    <button class="tool-btn muted" style="margin-left:auto" onclick="A.askToggleOff()">Toggle All Off</button>
+    <button class="tool-btn red" onclick="A.askClear()">Clear list</button>
+  </div>`;
+
+  if(confirmClear==='toggle')
+    h+=`<div class="confirm-row"><span class="confirm-msg">Toggle all needed items off in ${tab?escHtml(tab.label):'this list'}?</span><button class="cy" onclick="A.doToggleOff()">Toggle off</button><button class="cn" onclick="A.cancelConfirm()">Cancel</button></div>`;
+  if(confirmClear==='delete')
+    h+=`<div class="confirm-row"><span class="confirm-msg">Delete ALL items from ${tab?escHtml(tab.label):'this list'}? Cannot be undone.</span><button class="cy" onclick="A.doClear()">Delete all</button><button class="cn" onclick="A.cancelConfirm()">Cancel</button></div>`;
+  if(logLines.length){
+    h+=`<div class="log-banner">${logLines.join('<br>')}`;
+    if(undoSnap) h+=`<br><button class="log-undo" onclick="A.doUndo()">Undo import</button>`;
+    h+=`</div>`;
+  }
+
+  h+=`<div class="action-strip">
+    <button class="act-btn blue" id="exp-tab-btn" onclick="A.doExport(false)">Copy ${tab?escHtml(tab.label):''} ↗</button>
+    <button class="act-btn grey" id="exp-full-btn" onclick="A.doExport(true)">Copy full list ↗</button>
+    <button class="act-btn amber" onclick="A.openModal('import')">Import list</button>
+  </div>`;
+
+  const co = catList().map((c,i)=>`<option${i===0?' selected':''}>${escHtml(c)}</option>`).join('');
+  const shopSel = shopTabs.map(t=>`<span class="add-sc${addDraftShops.includes(t.id)?' on':''}" onclick="A.toggleAddShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
+  h+=`<div class="add-area">
+    <div class="add-row">
+      <input class="add-input" id="new-name" placeholder="Add item…" type="text" autocomplete="off">
+      <select class="cat-sel" id="new-cat">${co}</select>
+      <button class="add-ok" id="add-ok-btn">+</button>
+    </div>
+    ${shopTabs.length?`<div class="add-shop-row">${shopSel}</div>`:''}
+  </div>`;
+
+  if(pendingAdd)
+    h+=`<div class="confirm-row"><span class="confirm-msg">"${escHtml(pendingAdd.existingName)}" already exists. Add "${escHtml(pendingAdd.name)}" anyway?</span><button class="cy" onclick="A.confirmAdd()">Add anyway</button><button class="cn" onclick="A.cancelAdd()">Cancel</button></div>`;
+
+  if(!visible.length){
+    h+=`<div class="empty">No items yet.</div>`;
+  } else if(sortAlpha){
+    h+=catBlock(buildCatMap(visible));
+  } else {
+    if(needed.length)    h+=catBlock(buildCatMap(needed));
+    if(needed.length&&notNeeded.length) h+=`<div class="divider"></div>`;
+    if(notNeeded.length) h+=catBlock(buildCatMap(notNeeded));
+  }
+
+  // Manage shops
+  const shopChips = shopTabs.map(t=>{
+    if(confirmDelete&&confirmDelete.type==='shop'&&confirmDelete.id===t.id)
+      return`<span class="chip" style="background:#5a1a1a;border-color:#A32D2D;gap:6px"><span style="color:#ffcccc;font-size:12px">Remove ${escHtml(t.label)}?</span><button class="cy" style="padding:3px 8px;font-size:12px" onclick="A.doDeleteShop('${t.id}')">Yes</button><button class="cn" style="padding:3px 8px;font-size:12px" onclick="A.cancelConfirm()">No</button></span>`;
+    return`<span class="chip">${escHtml(t.label)}<button class="chip-del" onclick="A.askDeleteShop('${t.id}')">✕</button></span>`;
+  }).join('');
+  const catChips = catList().filter(c=>c!=='Uncategorised').map(c=>{
+    const enc=encodeURIComponent(c);
+    if(confirmDelete&&confirmDelete.type==='cat'&&confirmDelete.id===c)
+      return`<span class="chip" style="background:#5a1a1a;border-color:#A32D2D;gap:6px"><span style="color:#ffcccc;font-size:12px">Remove ${escHtml(c)}?</span><button class="cy" style="padding:3px 8px;font-size:12px" onclick="A.doDeleteCat('${enc}')">Yes</button><button class="cn" style="padding:3px 8px;font-size:12px" onclick="A.cancelConfirm()">No</button></span>`;
+    return`<span class="chip">${escHtml(c)}<button class="chip-del" onclick="A.askDeleteCat('${enc}')">✕</button></span>`;
+  }).join('');
+
+  h+=`<div style="padding:0 14px 24px">
+    <div class="manage-section">
+      <div class="manage-section-head">Edit Shops</div>
+      <div class="manage-section-body">
+        <div class="chip-list">${shopChips||'<span style="font-size:13px;color:var(--muted)">No shops yet</span>'}</div>
+        <div class="manage-row"><input class="manage-input" id="new-shop" placeholder="Add shop…" autocomplete="off"><button class="manage-btn" id="add-shop-btn">Add</button></div>
+      </div>
+    </div>
+    <div class="manage-section" style="margin-top:12px">
+      <div class="manage-section-head">Edit Categories</div>
+      <div class="manage-section-body">
+        <div class="chip-list"><span class="chip" style="opacity:0.45">Uncategorised</span>${catChips}</div>
+        <div class="manage-row"><input class="manage-input" id="new-cat-name" placeholder="Add category…" autocomplete="off"><button class="manage-btn" id="add-cat-btn">Add</button></div>
+      </div>
+    </div>
+  </div>`;
+  return h;
+}
+
+function bindShoppingEvents(){
+  const $ = id => document.getElementById(id);
+  $('add-ok-btn')  && $('add-ok-btn').addEventListener('click', A.addItem);
+  $('new-name')    && $('new-name').addEventListener('keydown',e=>{if(e.key==='Enter')A.addItem()});
+  $('add-shop-btn')&& $('add-shop-btn').addEventListener('click', A.addShop);
+  $('new-shop')    && $('new-shop').addEventListener('keydown',e=>{if(e.key==='Enter')A.addShop()});
+  $('add-cat-btn') && $('add-cat-btn').addEventListener('click', A.addCat);
+  $('new-cat-name')&& $('new-cat-name').addEventListener('keydown',e=>{if(e.key==='Enter')A.addCat()});
+  if(editId!==null){
+    const en=$('ep-name'), ec=$('ep-cat');
+    if(en){ en.focus(); en.select(); en.addEventListener('input',e=>{editDraft.name=e.target.value}); }
+    if(ec) ec.addEventListener('change',e=>{editDraft.cat=e.target.value});
+  }
+}
+
+function buildTodoHtml(){
+  let h=`<div class="todo-add-area">
+    <input class="todo-input" id="todo-new" placeholder="Add task…" type="text" autocomplete="off">
+    <button class="todo-add-ok" id="todo-add-btn">+</button>
+  </div>`;
+  if(!todoItems.length){ h+=`<div class="empty">No tasks yet.</div>`; return h; }
+  todoItems.forEach(t=>{
+    if(confirmTodoDel===t.id){
+      h+=`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(t.text)}"?</span><button class="cy" onclick="A.doDeleteTodo(${t.id})">Remove</button><button class="cn" onclick="A.cancelConfirm()">Cancel</button></div>`;
+    } else {
+      h+=`<div class="todo-row">
+        <button class="todo-check${t.done?' ticked':''}" onclick="A.toggleTodo(${t.id})">${t.done?'✓':''}</button>
+        <span class="todo-text${t.done?' ticked':''}">${escHtml(t.text)}</span>
+        <button class="icon-btn" onclick="A.askDeleteTodo(${t.id})">✕</button>
+      </div>`;
+    }
+  });
+  return h;
+}
+
+/* ── Item rows ── */
+function rowHtml(item){
+  const tags = item.shops.map(s=>{const t=tabById(s);return t?`<span class="shop-tag">${escHtml(t.label)}</span>`:''}).join('');
+  const tagsHtml = tags?`<div class="shop-tags">${tags}</div>`:'';
+  const bg = item.needed?'#185FA5':'#999';
+  let h='';
+  if(confirmId===item.id){
+    h+=`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(item.name)}"?</span><button class="cy" onclick="A.doDelete(${item.id})">Remove</button><button class="cn" onclick="A.cancelConfirm()">Cancel</button></div>`;
+  } else {
+    h+=`<div class="item-row"><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="A.toggleItem(${item.id})"></button><button class="icon-btn" onclick="A.openEdit(${item.id})">✎</button><button class="icon-btn" onclick="A.askDelete(${item.id})">✕</button></div>`;
+  }
+  if(editId===item.id&&editDraft){
+    const co=catList().map(c=>`<option${c===editDraft.cat?' selected':''}>${escHtml(c)}</option>`).join('');
+    const sc=shopTabs.map(t=>`<span class="sc${editDraft.shops.includes(t.id)?' on':''}" onclick="A.toggleDraftShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
+    h+=`<div class="edit-panel">
+      <div class="edit-label">Name</div><input class="edit-input" id="ep-name" value="${escAttr(editDraft.name)}" style="margin-bottom:12px">
+      <div class="edit-label">Category</div><select class="edit-input" id="ep-cat" style="margin-bottom:12px">${co}</select>
+      <div class="edit-label" style="margin-bottom:6px">Shops (blank = everywhere)</div>
+      <div class="shop-checks">${sc}</div>
+      <div style="display:flex;gap:10px"><button class="edit-save" onclick="A.saveEdit()">Save</button><button class="edit-cancel" onclick="A.closeEdit()">Cancel</button></div>
+    </div>`;
+  }
+  return h;
+}
+
+function buildCatMap(list){
+  const m={};
+  catList().forEach(c=>{m[c]=[]});
+  list.forEach(i=>{
+    const c=i.cat&&m[i.cat]!==undefined?i.cat:'Uncategorised';
+    if(!m[c])m[c]=[];
+    m[c].push(i);
+  });
+  return m;
+}
+function catBlock(byCat){
+  let h='';
+  catList().forEach(cat=>{
+    const rows=byCat[cat]||[];
+    if(!rows.length)return;
+    h+=`<div class="sec-head">${escHtml(cat)}</div>`;
+    rows.forEach(item=>{h+=rowHtml(item);});
+  });
+  return h;
+}
+
+/* ── Modal ── */
+function renderModal(){
+  const el = document.getElementById('modal-el');
+  if(!modal){ el.innerHTML=''; return; }
+
+  if(modal==='new-list'){
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>New list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+      <label class="modal-label">List name</label>
+      <input class="modal-input" id="ml-name" placeholder="e.g. Weekly shop" autocomplete="off">
+      <div id="ml-err"></div>
+      <div class="modal-opts">
+        <button class="modal-secondary" onclick="A.closeModal()">Cancel</button>
+        <button class="modal-go green" onclick="A.doCreateList()">Create</button>
+      </div>
+    </div></div>`;
+    setupModalBg();
+    setTimeout(()=>{ const e=document.getElementById('ml-name'); if(e){e.focus();e.addEventListener('keydown',ev=>{if(ev.key==='Enter')A.doCreateList()});} },30);
+    return;
+  }
+
+  if(modal==='open-list'){
+    const items_html = registry.length ? registry.map(r=>`
+      <div class="list-picker-item" onclick="A.pickList('${r.localId}')">
+        <div style="flex:1;min-width:0">
+          <div class="list-picker-name">${escHtml(r.name)}${currentLocalId===r.localId?' <span style="font-size:11px;color:#185FA5">(open)</span>':''}</div>
+          ${r.listId?`<div class="list-picker-meta">${r.listId}</div>`:''}
+        </div>
+        ${r.isShared?`<span style="font-size:10px;padding:2px 7px;background:#185FA5;color:#fff;border-radius:10px;font-weight:600">Shared</span>`:''}
+      </div>`).join('') : '<p>No saved lists.</p>';
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>Open list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+      <div style="margin-bottom:16px">${items_html}</div>
+      <div style="border-top:0.5px solid var(--border-md);padding-top:16px">
+        <p style="margin-bottom:10px;font-weight:600;color:var(--text);font-size:14px">Join a shared list</p>
+        <label class="modal-label">List ID</label>
+        <input class="modal-input" id="ol-id" placeholder="e.g. Ciaras-list-4X7Q" style="font-family:monospace">
+        <label class="modal-label">Password</label>
+        <input class="modal-input" id="ol-pw" type="password" placeholder="Password">
+        <div id="ol-err"></div>
+        <div class="modal-opts"><button class="modal-go" id="ol-btn" onclick="A.doJoinList()">Join</button></div>
+      </div>
+    </div></div>`;
+    setupModalBg();
+    return;
+  }
+
+  if(modal==='share'){
+    const reg = currentReg();
+    if(!reg){ el.innerHTML=''; return; }
+    if(reg.isShared){
+      el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+        <h3>Shared list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+        <p>Share this ID and the password with your housemates so they can join.</p>
+        <label class="modal-label">List ID</label>
+        <div class="modal-id-box"><span>${reg.listId}</span><button class="modal-copy-btn" id="copy-id-btn" onclick="A.copyListId()">Copy</button></div>
+        <p>They enter this ID and the password in <em>Open list → Join a shared list</em>.</p>
+      </div></div>`;
+    } else {
+      el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+        <h3>Share list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+        <p>Set a password. Your housemate will enter the list ID and this password to join.</p>
+        <label class="modal-label">Password (min 5 characters)</label>
+        <input class="modal-input" id="sh-pw" type="password" placeholder="Choose a password" autocomplete="new-password">
+        <label class="modal-label">Confirm password</label>
+        <input class="modal-input" id="sh-pw2" type="password" placeholder="Confirm password">
+        <div id="sh-err"></div>
+        <div class="modal-opts">
+          <button class="modal-secondary" onclick="A.closeModal()">Cancel</button>
+          <button class="modal-go" id="sh-btn" onclick="A.doEnableSharing()">Share list</button>
+        </div>
+      </div></div>`;
+    }
+    setupModalBg();
+    return;
+  }
+
+  if(modal==='import'){
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>Import list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+      <p>Paste a list — one item per line. A shop name or "All Shopping" as the first line is used as a header. Bullets and dashes are stripped.</p>
+      <textarea id="import-ta" placeholder="Paste list here…"></textarea>
+      <div class="modal-opts">
+        <button class="override-toggle${importOverride?' on':''}" onclick="A.toggleOverride()">Override mode</button>
+        <button class="modal-go" onclick="A.runImport()">Import</button>
+      </div>
+      <p class="modal-hint">${importOverride?'Override: imported items toggle ON, everything else toggles OFF.':'Merge: found items toggle ON, new items added and toggled ON.'}</p>
+    </div></div>`;
+    setupModalBg();
+    return;
+  }
+
+  if(modal==='delete-list'){
+    const reg = currentReg();
+    if(!reg){ el.innerHTML=''; return; }
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>Delete list <button class="modal-close" onclick="A.closeModal()">✕</button></h3>
+      <p>Remove <strong>${escHtml(reg.name)}</strong> from this device?${reg.isShared?' The shared list stays in the cloud — others can still access it.':''}</p>
+      <div class="modal-opts">
+        <button class="modal-secondary" onclick="A.closeModal()">Cancel</button>
+        <button class="modal-go red" onclick="A.doDeleteCurrentList()">Delete from device</button>
+      </div>
+    </div></div>`;
+    setupModalBg();
+    return;
+  }
+
+  el.innerHTML='';
+}
+
+function setupModalBg(){
+  const mbg = document.getElementById('mbg');
+  if(mbg) mbg.addEventListener('click',e=>{if(e.target.id==='mbg')A.closeModal()});
+}
+
+/* ── Burger ── */
+function renderBurger(){
+  const el = document.getElementById('burger-el');
+  if(!burgerOpen){ el.innerHTML=''; return; }
+  const listItems = registry.map(r=>`
+    <button class="burger-item${r.localId===currentLocalId?' active-list':''}" onclick="A.pickList('${r.localId}')">
+      <span class="burger-icon">📋</span>
+      <span class="burger-list-name">${escHtml(r.name)}</span>
+      ${r.isShared?`<span class="burger-list-tag shared">Shared</span>`:''}
+      ${r.localId===currentLocalId?`<span class="burger-list-tag active">Open</span>`:''}
+    </button>`).join('');
+  el.innerHTML=`
+    <div class="burger-overlay" onclick="A.closeBurger()"></div>
+    <div class="burger-panel">
+      <div class="burger-header">
+        <span class="burger-header-title">My Lists</span>
+        <button class="burger-close" onclick="A.closeBurger()">✕</button>
+      </div>
+      ${registry.length?`<div class="burger-section">Lists</div>${listItems}<div class="burger-divider"></div>`:''}
+      <button class="burger-item" onclick="A.openModal('new-list')"><span class="burger-icon">＋</span><span>New list</span></button>
+      <button class="burger-item" onclick="A.openModal('open-list')"><span class="burger-icon">📂</span><span>Open / join list</span></button>
+      ${currentLocalId?`<div class="burger-divider"></div>
+      <button class="burger-item danger" onclick="A.openModal('delete-list')"><span class="burger-icon">🗑</span><span>Delete current list</span></button>`:''}
+      <div class="burger-divider"></div>
+      <button class="burger-item" onclick="window.close()"><span class="burger-icon">✕</span><span>Quit</span></button>
+    </div>`;
+}
+
+/* ══════════════════════════════════
+   EXPORT / IMPORT
+══════════════════════════════════ */
+function buildExport(full){
+  const lines=[];
+  if(full){
+    lines.push('ALL SHOPPING','');
+    const all=items.filter(i=>i.needed).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    const m={};catList().forEach(c=>{m[c]=[]});
+    all.forEach(i=>{const c=i.cat&&m[i.cat]!==undefined?i.cat:'Uncategorised';if(!m[c])m[c]=[];m[c].push(i)});
+    catList().forEach(cat=>{
+      if(!(m[cat]||[]).length)return;
+      lines.push(cat+':');
+      m[cat].forEach(i=>{
+        const shops=i.shops.length?' ('+i.shops.map(s=>{const t=tabById(s);return t?t.label:s}).join(', ')+')':'';
+        lines.push('• '+i.name+shops);
+      });
+      lines.push('');
+    });
+  } else {
+    const tab=tabById(activeTab);
+    lines.push((tab?tab.label:'List').toUpperCase(),'');
+    const vis=items.filter(i=>itemInTab(i,activeTab)&&i.needed).slice().sort((a,b)=>a.name.localeCompare(b.name));
+    if(!vis.length){ lines.push('(nothing toggled)'); }
+    else{
+      const m={};catList().forEach(c=>{m[c]=[]});
+      vis.forEach(i=>{const c=i.cat&&m[i.cat]!==undefined?i.cat:'Uncategorised';if(!m[c])m[c]=[];m[c].push(i)});
+      const showShops=tab&&tab.type==='all';
+      catList().forEach(cat=>{
+        if(!(m[cat]||[]).length)return;
+        lines.push(cat+':');
+        m[cat].forEach(i=>{
+          const shops=showShops&&i.shops.length?' ('+i.shops.map(s=>{const t=tabById(s);return t?t.label:s}).join(', ')+')':'';
+          lines.push('• '+i.name+shops);
+        });
+        lines.push('');
+      });
+    }
+  }
+  return lines.join('\n').trim();
+}
+
+function parsePaste(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const allLabels=allTabs().map(t=>t.label.toLowerCase());
+  const catNames=catList().map(c=>c.toLowerCase());
+  let header=null; const names=[];
+  lines.forEach((line,i)=>{
+    const clean=line.replace(/^[•\-\*]\s*/,'').replace(/ *\(.*?\)\s*$/,'').trim();
+    if(!clean)return;
+    const low=clean.toLowerCase();
+    if(i===0&&(low==='all shopping'||low==='groceries'||low==='full list'||allLabels.includes(low))){header=clean;return;}
+    if(catNames.includes(low.replace(/:$/,''))||low.endsWith(':'))return;
+    names.push(clean);
+  });
+  return{header,names};
+}
+
+function copyToClipboard(text,btnId,originalText){
+  function ok(){const b=document.getElementById(btnId);if(b){b.textContent='✓ Copied!';b.classList.add('done');setTimeout(()=>{b.textContent=originalText;b.classList.remove('done')},2200)}}
+  function fail(){const b=document.getElementById(btnId);if(b){b.textContent='Copy failed';setTimeout(()=>{b.textContent=originalText},2000)}}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(ok).catch(()=>execCopy(text,ok,fail));}
+  else execCopy(text,ok,fail);
+}
+function execCopy(text,onOk,onFail){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{const ok=document.execCommand('copy');document.body.removeChild(ta);ok?onOk():onFail();}
+  catch(e){document.body.removeChild(ta);onFail();}
+}
+
+function showErr(id,msg){ const el=document.getElementById(id); if(el) el.innerHTML=`<div class="modal-err">${msg}</div>`; }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+/* ══════════════════════════════════
+   PUBLIC API  (window.A)
+══════════════════════════════════ */
+const A = window.A = {
+
+  setTab(id){ activeTab=id; confirmId=null; confirmClear=false; confirmDelete=null; confirmTodoDel=null; editId=null; editDraft=null; addDraftShops=[]; pendingAdd=null; logLines=[]; render(); },
+  setSort(a){ sortAlpha=a; render(); },
+  toggleBurger(){ burgerOpen=!burgerOpen; renderBurger(); },
+  closeBurger(){ burgerOpen=false; renderBurger(); },
+  openModal(name){ modal=name; burgerOpen=false; render(); },
+  closeModal(){ modal=null; render(); },
+  openShareModal(){ modal='share'; render(); },
+  toggleOverride(){ importOverride=!importOverride; renderModal(); },
+
+  pickList(localId){ modal=null; openList(localId); },
+
+  doCreateList(){
+    const inp=document.getElementById('ml-name');
+    if(!inp)return;
+    const name=inp.value.trim();
+    if(!name){ showErr('ml-err','Please enter a name.'); return; }
+    modal=null;
+    createList(name);
+  },
+
+  async doJoinList(){
+    const idEl=document.getElementById('ol-id');
+    const pwEl=document.getElementById('ol-pw');
+    if(!idEl||!pwEl)return;
+    const listId=idEl.value.trim();
+    const pw=pwEl.value;
+    if(!listId||!pw){ showErr('ol-err','Enter both the list ID and password.'); return; }
+    const btn=document.getElementById('ol-btn');
+    if(btn){btn.textContent='Joining…';btn.disabled=true;}
+    try{
+      modal=null;
+      await joinSharedList(listId,pw);
+    }catch(e){
+      modal='open-list'; render();
+      showErr('ol-err',e.message||'Could not join.');
+      const b=document.getElementById('ol-btn');
+      if(b){b.textContent='Join';b.disabled=false;}
+    }
+  },
+
+  async doEnableSharing(){
+    const pw=document.getElementById('sh-pw')?.value||'';
+    const pw2=document.getElementById('sh-pw2')?.value||'';
+    if(pw.length<5){ showErr('sh-err','Password must be at least 5 characters.'); return; }
+    if(pw!==pw2){ showErr('sh-err','Passwords do not match.'); return; }
+    const btn=document.getElementById('sh-btn');
+    if(btn){btn.textContent='Sharing…';btn.disabled=true;}
+    try{
+      await enableSharing(pw);
+      modal='share'; render(); // re-open to show the ID
+    }catch(e){
+      showErr('sh-err',e.message||'Could not share. Check connection.');
+      if(btn){btn.textContent='Share list';btn.disabled=false;}
+    }
+  },
+
+  copyListId(){
+    const reg=currentReg();
+    if(!reg||!reg.listId)return;
+    copyToClipboard(reg.listId,'copy-id-btn','Copy');
+  },
+
+  doDeleteCurrentList(){
+    const id=currentLocalId;
+    disconnectSync();
+    modal=null;
+    deleteList(id);
+    render();
+  },
+
+  /* Shopping */
+  toggleItem(id){ const i=items.find(x=>x.id===id); if(i){i.needed=!i.needed;saveAll();render();} },
+  askDelete(id){ confirmId=id; confirmClear=false; editId=null; editDraft=null; render(); },
+  cancelConfirm(){ confirmId=null; confirmClear=false; confirmDelete=null; confirmTodoDel=null; render(); },
+  doDelete(id){ items=items.filter(i=>i.id!==id); confirmId=null; saveAll(); render(); },
+  askClear(){ confirmClear='delete'; confirmId=null; editId=null; editDraft=null; render(); },
+  askToggleOff(){ confirmClear='toggle'; confirmId=null; editId=null; editDraft=null; render(); },
+  doClear(){ items=items.filter(i=>!itemInTab(i,activeTab)); confirmClear=false; saveAll(); render(); },
+  doToggleOff(){ items.filter(i=>itemInTab(i,activeTab)&&i.needed).forEach(i=>{i.needed=false;}); confirmClear=false; saveAll(); render(); },
+
+  openEdit(id){
+    if(editId===id){A.closeEdit();return;}
+    const item=items.find(i=>i.id===id);if(!item)return;
+    editId=id; editDraft={name:item.name,cat:item.cat||'Uncategorised',shops:[...item.shops]};
+    confirmId=null; confirmClear=false; render();
+  },
+  closeEdit(){ editId=null; editDraft=null; render(); },
+  toggleDraftShop(shopId){
+    if(!editDraft)return;
+    const en=document.getElementById('ep-name'),ec=document.getElementById('ep-cat');
+    if(en)editDraft.name=en.value; if(ec)editDraft.cat=ec.value;
+    if(editDraft.shops.includes(shopId)) editDraft.shops=editDraft.shops.filter(s=>s!==shopId);
+    else editDraft.shops.push(shopId);
+    render();
+  },
+  saveEdit(){
+    const item=items.find(i=>i.id===editId);if(!item||!editDraft)return;
+    const en=document.getElementById('ep-name'),ec=document.getElementById('ep-cat');
+    if(en)editDraft.name=en.value.trim()||item.name;
+    if(ec)editDraft.cat=ec.value;
+    Object.assign(item,editDraft); editId=null; editDraft=null; saveAll(); render();
+  },
+
+  toggleAddShop(id){
+    if(addDraftShops.includes(id)) addDraftShops=addDraftShops.filter(s=>s!==id);
+    else addDraftShops.push(id);
+    render();
+  },
+  addItem(){
+    const ne=document.getElementById('new-name'),ce=document.getElementById('new-cat');
+    if(!ne)return;
+    const name=ne.value.trim(); if(!name)return;
+    const tab=tabById(activeTab);
+    const shops=addDraftShops.length>0?[...addDraftShops]:(tab&&tab.type==='shop'?[activeTab]:[]);
+    const cat=ce?ce.value:catList()[0];
+    const similar=findSimilar(name);
+    if(similar){ pendingAdd={name,cat,shops,existingName:similar.name}; render(); return; }
+    doAddItem(name,cat,shops);
+  },
+  confirmAdd(){ if(!pendingAdd)return; doAddItem(pendingAdd.name,pendingAdd.cat,pendingAdd.shops); },
+  cancelAdd(){ pendingAdd=null; render(); setTimeout(()=>{const e=document.getElementById('new-name');if(e)e.focus();},30); },
+
+  addShop(){
+    const el=document.getElementById('new-shop');if(!el)return;
+    const label=el.value.trim();if(!label)return;
+    const id=label.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+    if(shopTabs.find(t=>t.id===id))return;
+    shopTabs.push({id,label,type:'shop'}); el.value=''; saveAll(); render();
+  },
+  askDeleteShop(id){ confirmDelete={type:'shop',id}; confirmId=null; confirmClear=false; render(); },
+  doDeleteShop(id){
+    shopTabs=shopTabs.filter(t=>t.id!==id);
+    items.forEach(i=>{i.shops=i.shops.filter(s=>s!==id)});
+    if(activeTab===id) activeTab='all';
+    confirmDelete=null; saveAll(); render();
+  },
+  addCat(){
+    const el=document.getElementById('new-cat-name');if(!el)return;
+    const name=el.value.trim();if(!name)return;
+    if(cats.includes(name))return;
+    const idx=cats.indexOf('Uncategorised');
+    if(idx>=0) cats.splice(idx+1,0,name); else cats.push(name);
+    el.value=''; saveAll(); render();
+  },
+  askDeleteCat(enc){ confirmDelete={type:'cat',id:decodeURIComponent(enc)}; confirmId=null; confirmClear=false; render(); },
+  doDeleteCat(enc){
+    const name=decodeURIComponent(enc);
+    cats=cats.filter(c=>c!==name);
+    items.forEach(i=>{if(i.cat===name)i.cat='Uncategorised'});
+    confirmDelete=null; saveAll(); render();
+  },
+
+  /* To Do */
+  addTodo(){
+    const el=document.getElementById('todo-new');if(!el)return;
+    const text=el.value.trim();if(!text)return;
+    todoItems.push({id:nextTodoId++,text,done:false});
+    el.value=''; saveAll(); render();
+  },
+  toggleTodo(id){ const t=todoItems.find(x=>x.id===id); if(t){t.done=!t.done;saveAll();render();} },
+  askDeleteTodo(id){ confirmTodoDel=id; render(); },
+  doDeleteTodo(id){ todoItems=todoItems.filter(t=>t.id!==id); confirmTodoDel=null; saveAll(); render(); },
+
+  /* Export */
+  doExport(full){
+    const text=buildExport(full);
+    const btnId=full?'exp-full-btn':'exp-tab-btn';
+    const orig=full?'Copy full list ↗':'Copy '+(tabById(activeTab)?tabById(activeTab).label:'')+' ↗';
+    copyToClipboard(text,btnId,orig);
+  },
+
+  /* Import */
+  runImport(){
+    const ta=document.getElementById('import-ta');
+    if(!ta||!ta.value.trim()){modal=null;render();return;}
+    const{header,names}=parsePaste(ta.value);
+    const log=[];
+    undoSnap={items:clone(items),shopTabs:clone(shopTabs),cats:clone(cats)};
+    let scopeTabId=null;
+    if(header){
+      const hLow=header.toLowerCase();
+      if(hLow==='all shopping'||hLow==='groceries'||hLow==='full list'){scopeTabId='all';}
+      else{
+        let found=shopTabs.find(t=>t.label.toLowerCase()===hLow);
+        if(!found){
+          const id=hLow.replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+          found={id,label:normName(header),type:'shop'};
+          shopTabs.push(found);
+          log.push(`"${found.label}" not found — added as new shop tab`);
+        }
+        scopeTabId=found.id;
+      }
+    }
+    let toggled=0,added=0;
+    const importedIds=new Set();
+    names.forEach(name=>{
+      const low=name.toLowerCase();
+      let item=items.find(i=>i.name.toLowerCase()===low);
+      if(item){item.needed=true;importedIds.add(item.id);toggled++;}
+      else{
+        const newShops=scopeTabId&&tabById(scopeTabId)&&tabById(scopeTabId).type==='shop'?[scopeTabId]:[];
+        const ni={id:nextId++,name:normName(name),cat:'Uncategorised',shops:newShops,needed:true};
+        items.push(ni);importedIds.add(ni.id);added++;
+        log.push(`"${ni.name}" not found — added`);
+      }
+    });
+    if(toggled>0) log.unshift(`${toggled} item${toggled!==1?'s':''} toggled on`);
+    if(added>0)   log.unshift(`${added} item${added!==1?'s':''} added and toggled on`);
+    if(importOverride&&scopeTabId){
+      let off=0;
+      items.forEach(i=>{if(itemInTab(i,scopeTabId)&&!importedIds.has(i.id)&&i.needed){i.needed=false;off++;}});
+      if(off>0) log.push(`${off} item${off!==1?'s':''} toggled off (not in imported list)`);
+    }
+    logLines=log; saveAll(); modal=null; render();
+  },
+  doUndo(){
+    if(!undoSnap)return;
+    items=undoSnap.items; shopTabs=undoSnap.shopTabs; cats=undoSnap.cats||cats;
+    nextId=Math.max(0,...items.map(i=>i.id))+1;
+    undoSnap=null; logLines=['Import undone.']; saveAll(); render();
+  },
+};
+
+function doAddItem(name,cat,shops){
+  items.push({id:nextId++,name,cat,shops,needed:true});
+  addDraftShops=[]; pendingAdd=null;
+  saveAll(); render();
+  setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus();}},30);
+}
+
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+if(currentLocalId && registry.find(r=>r.localId===currentLocalId)){
+  loadListData(currentLocalId);
+  const reg = currentReg();
+  if(reg && reg.isShared && reg.listId){
+    subscribeToSharedList(reg.listId, currentLocalId);
+  }
+} else {
+  currentLocalId = null;
+  ss('sl_current', null);
+}
+
+render();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>

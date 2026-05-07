@@ -1,0 +1,16 @@
+{
+  "name": "A-List",
+  "short_name": "a-list",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1c1c1e",
+  "theme_color": "#185FA5",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2331/2331970.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
