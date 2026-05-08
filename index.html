@@ -469,6 +469,9 @@ function persistList(){
   ss('sl_all_lists',allLists);
   ss('sl_active_local',localId);
   ss('sl_list_'+localId,{items,shopTabs,cats,todoItems,nextId,nextTodoId});
+  // Ensure IDs are clean before pushing to Firestore
+  deduplicateIds(list.items);
+  deduplicateIds(list.todoItems);
   if(isShared&&listId&&!isSyncingFromRemote)pushToFirestore();
 }
 
@@ -570,11 +573,7 @@ function subscribeFirestore(listId){
     if(d.items!==undefined){
       list.items=d.items;
       const fixedItems=deduplicateIds(list.items);
-      if(fixedItems){
-        // Push corrected IDs back to Firestore so all devices get clean data
-        // Use setTimeout to ensure isSyncingFromRemote is cleared first
-        setTimeout(()=>{isSyncingFromRemote=false;pushToFirestore();},1000);
-      }
+
     }
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
