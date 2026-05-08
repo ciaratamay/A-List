@@ -697,8 +697,6 @@ function renderShoppingBody(el){
 
   // ADD AREA — preserve addNameDraft to prevent erasure when toggling shop chips
   const co=catList().map((c,i)=>`<option${i===0?' selected':''}>${escHtml(c)}</option>`).join('');
-  // Safety net: if on a shop tab and nothing selected yet, pre-select it
-  if(addDraftShops.length===0&&tab&&tab.type==='shop'){addDraftShops=[activeTab];}
   const addShopSel=list.shopTabs.map(t=>`<span class="add-sc${addDraftShops.includes(t.id)?' on':''}" onclick="_toggleAddShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
   h+=`<div class="add-area">
     <div class="add-row">
@@ -1286,12 +1284,21 @@ function _addItem(){
 function _doAdd(name,cat,shops){
   if(!list)return;
   list.items.push({id:list.nextId++,name,cat,shops,needed:true});
-  addDraftShops=[];pendingAdd=null;addNameDraft='';
+  pendingAdd=null;addNameDraft='';
+  // Re-set shop selection based on current tab after adding
+  const curTab=tabById(activeTab);
+  addDraftShops=(curTab&&curTab.type==='shop')?[activeTab]:[];
   persistList();render();
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
 }
 window._confirmAdd=()=>{if(!pendingAdd)return;_doAdd(pendingAdd.name,pendingAdd.cat,pendingAdd.shops)};
-window._cancelAdd=()=>{pendingAdd=null;render();setTimeout(()=>{const e=document.getElementById('new-name');if(e)e.focus()},30)};
+window._cancelAdd=()=>{
+  pendingAdd=null;
+  const curTab=tabById(activeTab);
+  addDraftShops=(curTab&&curTab.type==='shop')?[activeTab]:[];
+  render();
+  setTimeout(()=>{const e=document.getElementById('new-name');if(e)e.focus()},30);
+};
 
 /* ══════════════════════════════════════
    MANAGE SHOPS / CATS
