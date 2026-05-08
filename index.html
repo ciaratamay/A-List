@@ -433,7 +433,11 @@ function loadListFromStorage(localId){
   if(!meta)return null;
   const data=ls('sl_list_'+localId,null);
   if(!data)return null;
-  return {...meta,...data,cats:normCats(data.cats)};
+  const loaded={...meta,...data,cats:normCats(data.cats)};
+  // Ensure nextId is always a valid number
+  loaded.nextId=Math.max(Number(loaded.nextId)||0,...(loaded.items||[]).map(i=>Number(i.id)||0))+1;
+  loaded.nextTodoId=Math.max(Number(loaded.nextTodoId)||0,...(loaded.todoItems||[]).map(t=>Number(t.id)||0))+1;
+  return loaded;
 }
 
 function persistList(){
@@ -547,7 +551,7 @@ function subscribeFirestore(listId){
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
-    if(d.nextId!==undefined)list.nextId=d.nextId;
+    if(d.nextId!==undefined)list.nextId=Math.max(Number(d.nextId)||0,...(d.items||[]).map(i=>Number(i.id)||0))+1;
     if(d.nextTodoId!==undefined)list.nextTodoId=d.nextTodoId;
     ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
     syncStatus='live';isSyncingFromRemote=false;render();
@@ -795,7 +799,7 @@ function rowHtml(item){
   if(confirmId===item.id){
     h+=`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(item.name)}"?</span><button class="cy" onclick="_doDelete(${item.id})">Remove</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
   } else {
-    h+=`<div class="item-row"><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="_toggleItem(${item.id})"></button><button class="icon-btn" onclick="_openEdit(${item.id})">✎</button><button class="icon-btn" onclick="_askDelete(${item.id})">✕</button></div>`;
+    h+=`<div class="item-row"><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="_toggleItem(${item.id})"></button><button class="icon-btn" onclick="_openEdit(${item.id})" title="id:${item.id}">✎${item.id}</button><button class="icon-btn" onclick="_askDelete(${item.id})">✕</button></div>`;
   }
   if(editId===item.id&&editDraft){
     const co=catList().map(c=>`<option${c===editDraft.cat?' selected':''}>${escHtml(c)}</option>`).join('');
@@ -1283,7 +1287,12 @@ function _addItem(){
 }
 function _doAdd(name,cat,shops){
   if(!list)return;
-  list.items.push({id:list.nextId++,name,cat,shops,needed:true});
+  // Guard against NaN/undefined nextId
+  if(!list.nextId||isNaN(list.nextId)){
+    list.nextId=Math.max(0,...list.items.map(i=>Number(i.id)||0))+1;
+  }
+  const newId=list.nextId++;
+  list.items.push({id:newId,name,cat,shops,needed:true});
   pendingAdd=null;addNameDraft='';
   // Re-set shop selection based on current tab after adding
   const curTab=tabById(activeTab);
