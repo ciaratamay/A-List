@@ -567,7 +567,15 @@ function subscribeFirestore(listId){
     if(!snap.exists()){syncStatus='error';renderSyncBar();return;}
     const d=snap.data();isSyncingFromRemote=true;
     if(!list){isSyncingFromRemote=false;return;}
-    if(d.items!==undefined){list.items=d.items;deduplicateIds(list.items);}
+    if(d.items!==undefined){
+      list.items=d.items;
+      const fixedItems=deduplicateIds(list.items);
+      if(fixedItems){
+        // Push corrected IDs back to Firestore so all devices get clean data
+        // Use setTimeout to ensure isSyncingFromRemote is cleared first
+        setTimeout(()=>{isSyncingFromRemote=false;pushToFirestore();},1000);
+      }
+    }
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
