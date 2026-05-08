@@ -697,6 +697,8 @@ function renderShoppingBody(el){
 
   // ADD AREA — preserve addNameDraft to prevent erasure when toggling shop chips
   const co=catList().map((c,i)=>`<option${i===0?' selected':''}>${escHtml(c)}</option>`).join('');
+  // Safety net: if on a shop tab and nothing selected yet, pre-select it
+  if(addDraftShops.length===0&&tab&&tab.type==='shop'){addDraftShops=[activeTab];}
   const addShopSel=list.shopTabs.map(t=>`<span class="add-sc${addDraftShops.includes(t.id)?' on':''}" onclick="_toggleAddShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
   h+=`<div class="add-area">
     <div class="add-row">
@@ -1140,8 +1142,12 @@ window._setTab=id=>{
   // Save current add name draft before switching tabs
   const ne=document.getElementById('new-name');if(ne)addNameDraft=ne.value;
   activeTab=id;confirmId=null;confirmClear=false;confirmDelete=null;
-  editId=null;editDraft=null;addDraftShops=[];pendingAdd=null;sortMenuOpen=false;
-  addNameDraft='';render();
+  editId=null;editDraft=null;pendingAdd=null;sortMenuOpen=false;
+  addNameDraft='';
+  // Pre-select the current shop tab chip by default
+  const tab=tabById(id);
+  addDraftShops=(tab&&tab.type==='shop')?[id]:[];
+  render();
 };
 window._setSort=a=>{sortAlpha=a;sortMenuOpen=false;render()};
 window._toggleSortMenu=()=>{sortMenuOpen=!sortMenuOpen;render()};
@@ -1271,7 +1277,7 @@ function _addItem(){
   const ne=document.getElementById('new-name'),ce=document.getElementById('new-cat');
   const name=(ne?.value||addNameDraft).trim();if(!name)return;
   const tab=tabById(activeTab);
-  const shops=addDraftShops.length>0?[...addDraftShops]:(tab&&tab.type==='shop'?[activeTab]:[]);
+  const shops=[...addDraftShops]; // addDraftShops pre-populated from tab on switch
   const cat=ce?ce.value:catList()[0];
   const similar=findSimilar(name);
   if(similar){pendingAdd={name,cat,shops,existingName:similar.name};addNameDraft=name;render();return;}
