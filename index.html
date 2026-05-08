@@ -570,11 +570,7 @@ function subscribeFirestore(listId){
     if(!snap.exists()){syncStatus='error';renderSyncBar();return;}
     const d=snap.data();isSyncingFromRemote=true;
     if(!list){isSyncingFromRemote=false;return;}
-    if(d.items!==undefined){
-      list.items=d.items;
-      const fixedItems=deduplicateIds(list.items);
-
-    }
+    if(d.items!==undefined)list.items=d.items;
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
@@ -1159,6 +1155,7 @@ function renderBurger(){
     <div class="burger-item" onclick="_openManage('manage-shops');_closeBurger()"><span class="burger-item-icon">🏪</span><span>Edit shops</span></div>
     <div class="burger-item" onclick="_openManage('manage-cats');_closeBurger()"><span class="burger-item-icon">📋</span><span>Edit categories</span></div>
     <div class="burger-item" onclick="_openImport();_closeBurger()"><span class="burger-item-icon">📥</span><span>Import from clipboard</span></div>
+    <div class="burger-item" onclick="_fixAllIds();_closeBurger()" style="color:var(--accent-amber)"><span class="burger-item-icon">🔧</span><span>Fix item IDs (run once)</span></div>
     ${hasUndo?`<div class="burger-item" style="color:var(--accent-amber)" onclick="_doUndo();_closeBurger()"><span class="burger-item-icon">↩</span><span>Undo last action</span></div>`:''}
     `:''}
     <div class="burger-section-label">App</div>
@@ -1191,6 +1188,22 @@ window._closeManageModal=()=>{confirmDelete=null;modal=null;render()};
 window._openBurger=()=>{burgerOpen=true;render()};
 window._closeBurger=()=>{burgerOpen=false;render()};
 window._doQuit=()=>window.close();
+
+window._fixAllIds=async()=>{
+  if(!list)return;
+  list.items.forEach(item=>{item.id=Date.now()+Math.floor(Math.random()*999999);});
+  list.todoItems.forEach(item=>{item.id=Date.now()+Math.floor(Math.random()*999999);});
+  ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:0,nextTodoId:0});
+  if(list.isShared&&list.listId){
+    try{
+      await setDoc(doc(db,'lists',list.listId),{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:0,nextTodoId:0,updatedAt:Date.now(),pwHash:list.pwHash,name:list.name});
+      alert('Done! IDs fixed and synced to Firestore.');
+    }catch(e){alert('Saved locally. Firestore error: '+e.message);}
+  } else {
+    alert('Done! IDs fixed locally.');
+  }
+  render();
+};
 
 
 window._closeCurrentList=closeCurrentList;
