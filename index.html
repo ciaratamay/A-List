@@ -1218,10 +1218,10 @@ window._copyListId=()=>{if(!list||!list.listId)return;_clipCopy(list.listId,'cop
 /* ══════════════════════════════════════
    ITEM ACTIONS
 ══════════════════════════════════════ */
-window._toggleItem=id=>{if(!list)return;const i=list.items.find(x=>x.id===id);if(i){i.needed=!i.needed;persistList();render();}};
-window._askDelete=id=>{confirmId=id;confirmClear=false;editId=null;editDraft=null;render()};
+window._toggleItem=id=>{if(!list)return;id=Number(id);const i=list.items.find(x=>x.id===id);if(i){i.needed=!i.needed;persistList();render();}};
+window._askDelete=id=>{confirmId=Number(id);confirmClear=false;editId=null;editDraft=null;render()};
 window._cancelConfirm=()=>{confirmId=null;confirmClear=false;confirmDelete=null;confirmTodoDel=null;render()};
-window._doDelete=id=>{if(!list)return;pushUndo('Delete item');list.items=list.items.filter(i=>i.id!==id);confirmId=null;persistList();render()};
+window._doDelete=id=>{if(!list)return;id=Number(id);pushUndo('Delete item');list.items=list.items.filter(i=>i.id!==id);confirmId=null;persistList();render()};
 window._askClear=()=>{confirmClear='delete';confirmId=null;editId=null;editDraft=null;render()};
 window._askToggleOff=()=>{confirmClear='toggle';confirmId=null;editId=null;editDraft=null;render()};
 window._doClear=()=>{if(!list)return;pushUndo('Clear list');list.items=list.items.filter(i=>!itemInTab(i,activeTab));confirmClear=false;persistList();render()};
@@ -1229,6 +1229,7 @@ window._doToggleOff=()=>{if(!list)return;pushUndo('Toggle all off');list.items.f
 
 window._openEdit=id=>{
   if(!list)return;
+  id=Number(id);
   if(editId===id){_closeEdit();return;}
   const item=list.items.find(i=>i.id===id);if(!item)return;
   editId=id;editDraft={name:item.name,cat:item.cat||'Uncategorised',shops:[...item.shops]};
