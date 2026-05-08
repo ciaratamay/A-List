@@ -567,7 +567,7 @@ function subscribeFirestore(listId){
     if(!snap.exists()){syncStatus='error';renderSyncBar();return;}
     const d=snap.data();isSyncingFromRemote=true;
     if(!list){isSyncingFromRemote=false;return;}
-    if(d.items!==undefined)list.items=d.items;
+    if(d.items!==undefined){list.items=d.items;deduplicateIds(list.items);}
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
@@ -597,10 +597,14 @@ async function doJoinSharedList(listId,password){
   if(data.pwHash!==hash)throw new Error('Wrong password.');
   const localId='list_'+Date.now();
   const name=data.name||listId;
+  const joinItems=data.items||[];
+  const joinTodos=data.todoItems||[];
+  deduplicateIds(joinItems);
+  deduplicateIds(joinTodos);
   list={localId,name,listId,pwHash:hash,pwHint:null,isShared:true,
-    items:data.items||[],shopTabs:data.shopTabs||DEFAULT_SHOPS.map(s=>({...s})),
-    cats:normCats(data.cats||[]),todoItems:data.todoItems||[],
-    nextId:data.nextId||1,nextTodoId:data.nextTodoId||1};
+    items:joinItems,shopTabs:data.shopTabs||DEFAULT_SHOPS.map(s=>({...s})),
+    cats:normCats(data.cats||[]),todoItems:joinTodos,
+    nextId:0,nextTodoId:0};
   allLists.push({localId,name,listId,pwHash:hash,pwHint:null,isShared:true,lastOpened:Date.now()});
   ss('sl_all_lists',allLists);
   ss('sl_list_'+localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
