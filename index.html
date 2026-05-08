@@ -472,7 +472,7 @@ function persistList(){
   // Ensure IDs are clean before pushing to Firestore
   deduplicateIds(list.items);
   deduplicateIds(list.todoItems);
-  if(isShared&&listId&&!isSyncingFromRemote)pushToFirestore();
+  if(isShared&&listId)pushToFirestore();
 }
 
 function openList(localId){
@@ -499,6 +499,7 @@ function deleteLocalList(localId){
 }
 
 function resetUIState(){
+  lastLocalWriteTime=0;
   activeTab='all';sortAlpha=false;sortMenuOpen=false;
   confirmId=null;confirmClear=false;confirmDelete=null;
   editId=null;editDraft=null;addDraftShops=[];pendingAdd=null;
@@ -556,11 +557,20 @@ function firestorePayload(){
   return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId,updatedAt:Date.now()};
 }
 
+// Timestamp of our last local write — used to decide whether to accept remote updates
+let lastLocalWriteTime = 0;
+
 async function pushToFirestore(){
-  if(!list||!list.isShared||!list.listId||isSyncingFromRemote)return;
+  if(!list||!list.isShared||!list.listId)return;
   syncStatus='syncing';renderSyncBar();
-  try{await setDoc(doc(db,'lists',list.listId),firestorePayload());syncStatus='live';renderSyncBar();}
-  catch(e){console.error(e);syncStatus='error';renderSyncBar();}
+  const payload=firestorePayload(); // includes updatedAt:Date.now()
+  lastLocalWriteTime = payload.updatedAt;
+  try{
+    await setDoc(doc(db,'lists',list.listId),payload);
+    syncStatus='live';renderSyncBar();
+  }catch(e){
+    console.error(e);syncStatus='error';renderSyncBar();
+  }
 }
 
 function subscribeFirestore(listId){
@@ -568,16 +578,26 @@ function subscribeFirestore(listId){
   syncStatus='syncing';renderSyncBar();
   firestoreUnsub=onSnapshot(doc(db,'lists',listId),snap=>{
     if(!snap.exists()){syncStatus='error';renderSyncBar();return;}
-    const d=snap.data();isSyncingFromRemote=true;
-    if(!list){isSyncingFromRemote=false;return;}
+    const d=snap.data();
+    if(!list)return;
+    const remoteTime = Number(d.updatedAt)||0;
+    // Only accept remote data if it's strictly newer than our last local write
+    // This means: another device made a more recent change, apply it
+    if(remoteTime <= lastLocalWriteTime){
+      // This is our own write echoing back, or older — ignore content but mark live
+      syncStatus='live';renderSyncBar();return;
+    }
+    // Remote is newer — apply it
     if(d.items!==undefined)list.items=d.items;
     if(d.shopTabs!==undefined)list.shopTabs=d.shopTabs;
     if(d.cats!==undefined)list.cats=normCats(d.cats);
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
-    if(d.nextId!==undefined)list.nextId=Math.max(Number(d.nextId)||0,...(d.items||[]).map(i=>Number(i.id)||0))+1;
-    if(d.nextTodoId!==undefined)list.nextTodoId=d.nextTodoId;
+    if(d.nextId!==undefined)list.nextId=Number(d.nextId)||0;
+    if(d.nextTodoId!==undefined)list.nextTodoId=Number(d.nextTodoId)||0;
+    // Update our local write time so we don't re-push this received data
+    lastLocalWriteTime=remoteTime;
     ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
-    syncStatus='live';isSyncingFromRemote=false;render();
+    syncStatus='live';render();
   },err=>{console.error(err);syncStatus='error';renderSyncBar();});
 }
 
