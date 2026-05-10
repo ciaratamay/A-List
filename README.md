@@ -4,11 +4,10 @@
 Free to use how you like, see licence for details. I'm not responsible for anything that comes from using this testing build of an app on your device. 
 Passwords and lists are not secure currently.
 
-Main Purpose:
-To create the shopping list app I wanted.
-I didn't want to write out the items I buy all the time, and have to remember all the different things that are usually on my list.
-I also wanted to have a quick list I could look at when I'm in a specific shop. I buy 00 flour in one shop, chicken in another. Keeping multiple lists is annoying, especially when many items can be found in multiple shops. 
-And I wanted to be able to quickly copy and paste my needed items to share with someone who is in the shop now, and can buy for me, or for someone I live with to be able to check what's needed and add to it themselves.
+Main Features:
+Toggle items I buy repeatedly as opposed to writing out the names of items repeatedly.
+Separate lists by shop, without doubling up items on multiple lists.
+Quickly copy text lists to share with someone who's in the shop now, or share a list with your household.
 
 Features 07/05/2026
 
