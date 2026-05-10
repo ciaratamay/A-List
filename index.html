@@ -620,7 +620,12 @@ function catList(){return list&&list.cats.length?list.cats:DEFAULT_CATS.slice()}
 /* ══════════════════════════════════════
    RENDER
 ══════════════════════════════════════ */
-function render(){renderHeader();renderSyncBar();renderBody();renderModal();renderBurger();}
+function render(){renderHeader();renderSyncBar();renderBody();renderModal();renderBurger();scrollActiveTabIntoView();}
+function scrollActiveTabIntoView(){
+  const tabs=document.querySelector('.tabs');if(!tabs)return;
+  const active=tabs.querySelector('.tab.active');if(!active)return;
+  active.scrollIntoView({block:'nearest',inline:'nearest'});
+}
 
 function renderHeader(){
   const el=document.getElementById('header-el');
@@ -1144,8 +1149,11 @@ window._setTab=id=>{
   // Save current add name draft before switching tabs
   const ne=document.getElementById('new-name');if(ne)addNameDraft=ne.value;
   activeTab=id;confirmId=null;confirmClear=false;confirmDelete=null;
-  editId=null;editDraft=null;addDraftShops=[];pendingAdd=null;sortMenuOpen=false;
-  addNameDraft='';render();
+  editId=null;editDraft=null;pendingAdd=null;sortMenuOpen=false;
+  addNameDraft='';
+  const t=tabById(id);
+  addDraftShops=(t&&t.type==='shop')?[id]:[];
+  render();
 };
 window._setSort=a=>{sortAlpha=a;sortMenuOpen=false;render()};
 window._toggleSortMenu=()=>{sortMenuOpen=!sortMenuOpen;render()};
@@ -1274,7 +1282,7 @@ function _addItem(){
   const ne=document.getElementById('new-name'),ce=document.getElementById('new-cat');
   const name=(ne?.value||addNameDraft).trim();if(!name)return;
   const tab=tabById(activeTab);
-  const shops=addDraftShops.length>0?[...addDraftShops]:(tab&&tab.type==='shop'?[activeTab]:[]);
+  const shops=[...addDraftShops];
   const cat=ce?ce.value:catList()[0];
   const similar=findSimilar(name);
   if(similar){pendingAdd={name,cat,shops,existingName:similar.name};addNameDraft=name;render();return;}
@@ -1283,7 +1291,7 @@ function _addItem(){
 function _doAdd(name,cat,shops){
   if(!list)return;
   list.items.push({id:list.nextId++,name,cat,shops,needed:true});
-  addDraftShops=[];pendingAdd=null;addNameDraft='';
+  const _curTab=tabById(activeTab);addDraftShops=(_curTab&&_curTab.type==='shop')?[activeTab]:[];pendingAdd=null;addNameDraft='';
   persistList();render();
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
 }
