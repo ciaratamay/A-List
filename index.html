@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Shopping List">
+<meta name="apple-mobile-web-app-title" content="A-List TEST">
 <link rel="manifest" href="manifest.json">
-<title>Shopping List</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNjMDM5MmIiLz48cGF0aCBkPSJNMTAgMTRoNmw3IDI0aDIybDUtMTZIMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNyIgY3k9IjQ0IiByPSIzIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNDEiIGN5PSI0NCIgcj0iMyIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNjMDM5MmIiLz48cGF0aCBkPSJNMTAgMTRoNmw3IDI0aDIybDUtMTZIMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSIyNyIgY3k9IjQ0IiByPSIzIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNDEiIGN5PSI0NCIgcj0iMyIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==">
+<title>A-List TEST</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);color:var(--text)}
@@ -620,7 +622,12 @@ function catList(){return list&&list.cats.length?list.cats:DEFAULT_CATS.slice()}
 /* ══════════════════════════════════════
    RENDER
 ══════════════════════════════════════ */
-function render(){renderHeader();renderSyncBar();renderBody();renderModal();renderBurger();}
+function render(){renderHeader();renderSyncBar();renderBody();renderModal();renderBurger();scrollActiveTabIntoView();}
+function scrollActiveTabIntoView(){
+  const tabs=document.querySelector('.tabs');if(!tabs)return;
+  const active=tabs.querySelector('.tab.active');if(!active)return;
+  active.scrollIntoView({block:'nearest',inline:'nearest'});
+}
 
 function renderHeader(){
   const el=document.getElementById('header-el');
@@ -1144,8 +1151,11 @@ window._setTab=id=>{
   // Save current add name draft before switching tabs
   const ne=document.getElementById('new-name');if(ne)addNameDraft=ne.value;
   activeTab=id;confirmId=null;confirmClear=false;confirmDelete=null;
-  editId=null;editDraft=null;addDraftShops=[];pendingAdd=null;sortMenuOpen=false;
-  addNameDraft='';render();
+  editId=null;editDraft=null;pendingAdd=null;sortMenuOpen=false;
+  addNameDraft='';
+  const t=tabById(id);
+  addDraftShops=(t&&t.type==='shop')?[id]:[];
+  render();
 };
 window._setSort=a=>{sortAlpha=a;sortMenuOpen=false;render()};
 window._toggleSortMenu=()=>{sortMenuOpen=!sortMenuOpen;render()};
@@ -1274,7 +1284,7 @@ function _addItem(){
   const ne=document.getElementById('new-name'),ce=document.getElementById('new-cat');
   const name=(ne?.value||addNameDraft).trim();if(!name)return;
   const tab=tabById(activeTab);
-  const shops=addDraftShops.length>0?[...addDraftShops]:(tab&&tab.type==='shop'?[activeTab]:[]);
+  const shops=[...addDraftShops];
   const cat=ce?ce.value:catList()[0];
   const similar=findSimilar(name);
   if(similar){pendingAdd={name,cat,shops,existingName:similar.name};addNameDraft=name;render();return;}
@@ -1283,7 +1293,7 @@ function _addItem(){
 function _doAdd(name,cat,shops){
   if(!list)return;
   list.items.push({id:list.nextId++,name,cat,shops,needed:true});
-  addDraftShops=[];pendingAdd=null;addNameDraft='';
+  const _curTab=tabById(activeTab);addDraftShops=(_curTab&&_curTab.type==='shop')?[activeTab]:[];pendingAdd=null;addNameDraft='';
   persistList();render();
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
 }
