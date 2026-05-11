@@ -196,6 +196,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .help-content code{background:var(--bg2);padding:1px 5px;border-radius:4px;font-size:13px;font-family:monospace}
 .help-content hr{border:none;border-top:0.5px solid var(--border);margin:12px 0}
 
+
+/* CUSTOM LIST */
+.cl-add-area{padding:12px 14px;background:var(--bg3);border-bottom:2px solid var(--border-md);display:flex;gap:8px}
+.cl-input{flex:1;font-size:15px;padding:9px 11px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--bg);color:var(--text);appearance:none;-webkit-appearance:none}
+.cl-input:focus{outline:none;border-color:var(--accent)}
+.cl-toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border)}
+.cl-item-card{margin:10px 12px;border:0.5px solid var(--border-md);border-radius:12px;background:var(--bg);overflow:hidden;transition:opacity 0.2s}
+.cl-item-card.got{opacity:0.5}
+.cl-item-card.got-border{border:2.5px solid var(--accent);opacity:0.6}
+.cl-item-head{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.cl-item-title{flex:1;font-size:16px;font-weight:600;color:var(--text)}
+.cl-item-title.got{text-decoration:line-through;color:var(--muted)}
+.cl-check-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
+.cl-check-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;text-align:center;line-height:1.2;max-width:52px}
+.cl-checkbox{width:24px;height:24px;border-radius:6px;border:1.5px solid var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;font-size:14px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;flex-shrink:0}
+.cl-checkbox.ticked{background:var(--accent-green);border-color:var(--accent-green);color:#fff}
+.cl-checkbox.donated{background:var(--accent-amber);border-color:var(--accent-amber);color:#fff}
+.cl-item-actions{display:flex;gap:4px;flex-shrink:0}
+.cl-options{border-top:0.5px solid var(--border);padding:8px 12px 4px}
+.cl-option-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:0.5px solid var(--border)}
+.cl-option-row:first-child{border-top:none}
+.cl-option-row.got-opt{opacity:0.38}
+.cl-option-row.bought-opt{opacity:0.55}
+.cl-option-info{flex:1;min-width:0}
+.cl-option-title{font-size:14px;font-weight:600;color:var(--text)}
+.cl-option-title.got{text-decoration:line-through;color:var(--muted)}
+.cl-option-desc{font-size:12px;color:var(--muted);margin-top:2px;word-break:break-word}
+.cl-option-link{font-size:12px;color:var(--accent);margin-top:2px;word-break:break-all;display:block}
+.cl-option-price{font-size:12px;font-weight:600;color:var(--accent-green);margin-top:3px}
+.cl-option-check{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;font-size:12px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;flex-shrink:0;margin-top:2px}
+.cl-option-check.ticked{background:var(--accent);border-color:var(--accent);color:#fff}
+.cl-add-option{font-size:13px;padding:6px 12px;border:0.5px dashed var(--border-md);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;margin:6px 0 8px;width:100%;text-align:left;-webkit-tap-highlight-color:transparent}
+.cl-edit-panel{background:var(--bg2);border-top:0.5px solid var(--border);padding:14px}
+.cl-edit-row{display:flex;gap:8px;margin-bottom:10px}
+.cl-edit-input{flex:1;font-size:14px;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--bg);color:var(--text);appearance:none;-webkit-appearance:none}
+.cl-edit-input:focus{outline:none;border-color:var(--accent)}
+.cl-opt-edit-block{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative}
+.cl-opt-edit-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;display:flex;justify-content:space-between;align-items:center}
+
 /* BURGER */
 .burger-menu-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200}
 .burger-menu{position:fixed;top:0;right:0;height:100%;width:270px;background:var(--bg);z-index:201;box-shadow:-4px 0 20px rgba(0,0,0,0.2);display:flex;flex-direction:column;overflow-y:auto}
@@ -418,8 +457,8 @@ function makeEmptyList(name,localId){
     localId,name,listId:null,pw:null,pwHint:null,isShared:false,
     items:DEFAULT_ITEMS.map(i=>({...i})),
     shopTabs:DEFAULT_SHOPS.map(s=>({...s})),
-    cats:DEFAULT_CATS.slice(),todoItems:[],
-    nextId:DEFAULT_ITEMS.length+1,nextTodoId:1
+    cats:DEFAULT_CATS.slice(),todoItems:[],customLists:[],
+    nextId:DEFAULT_ITEMS.length+1,nextTodoId:1,nextCustomId:1
   };
 }
 
@@ -428,18 +467,18 @@ function loadListFromStorage(localId){
   if(!meta)return null;
   const data=ls('sl_list_'+localId,null);
   if(!data)return null;
-  return {...meta,...data,cats:normCats(data.cats)};
+  return {...meta,...data,cats:normCats(data.cats),customLists:data.customLists||[],nextCustomId:data.nextCustomId||1};
 }
 
 function persistList(){
   if(!list)return;
-  const {localId,name,listId,pw,pwHint,isShared,items,shopTabs,cats,todoItems,nextId,nextTodoId}=list;
+  const {localId,name,listId,pw,pwHint,isShared,items,shopTabs,cats,todoItems,customLists,nextId,nextTodoId,nextCustomId}=list;
   const meta={localId,name,listId,pw,pwHint,isShared,lastOpened:Date.now()};
   const idx=allLists.findIndex(l=>l.localId===localId);
   if(idx>=0)allLists[idx]=meta;else allLists.push(meta);
   ss('sl_all_lists',allLists);
   ss('sl_active_local',localId);
-  ss('sl_list_'+localId,{items,shopTabs,cats,todoItems,nextId,nextTodoId});
+  ss('sl_list_'+localId,{items,shopTabs,cats,todoItems,customLists:customLists||[],nextId,nextTodoId,nextCustomId:nextCustomId||1});
   if(isShared&&listId&&!isSyncingFromRemote)pushToFirestore();
 }
 
@@ -471,7 +510,7 @@ function resetUIState(){
   confirmId=null;confirmClear=false;confirmDelete=null;
   editId=null;editDraft=null;addDraftShops=[];pendingAdd=null;
   addNameDraft='';
-  undoStack=[];modal=null;burgerOpen=false;confirmTodoDel=null;
+  undoStack=[];modal=null;burgerOpen=false;confirmTodoDel=null;modal_extra=null;
   modal_deleteLocalId=null;modal_extra=null;
 }
 
@@ -521,7 +560,7 @@ let firestoreUnsub=null,syncStatus='off',isSyncingFromRemote=false;
 
 function firestorePayload(){
   if(!list)return{};
-  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId,updatedAt:Date.now(),pw:list.pw||null,name:list.name};
+  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,customLists:list.customLists||[],nextId:list.nextId,nextTodoId:list.nextTodoId,nextCustomId:list.nextCustomId||1,updatedAt:Date.now(),pw:list.pw||null,name:list.name};
 }
 
 async function pushToFirestore(){
@@ -544,6 +583,8 @@ function subscribeFirestore(listId){
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
     if(d.nextId!==undefined)list.nextId=d.nextId;
     if(d.nextTodoId!==undefined)list.nextTodoId=d.nextTodoId;
+    if(d.customLists!==undefined)list.customLists=d.customLists;
+    if(d.nextCustomId!==undefined)list.nextCustomId=d.nextCustomId;
     ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
     syncStatus='live';isSyncingFromRemote=false;render();
   },err=>{console.error(err);syncStatus='error';renderSyncBar();});
@@ -608,7 +649,7 @@ let modal_deleteLocalId=null,modal_extra=null;
 /* ══════════════════════════════════════
    ACCESSORS
 ══════════════════════════════════════ */
-function allTabs(){return list?[...BASE_TABS_START,...list.shopTabs,TODO_TAB]:[...BASE_TABS_START,TODO_TAB]}
+function allTabs(){return list?[...BASE_TABS_START,...list.shopTabs,TODO_TAB,...(list.customLists||[])]:[...BASE_TABS_START,TODO_TAB]}
 function tabById(id){return allTabs().find(t=>t.id===id)}
 function itemInTab(item,tabId){
   const tab=tabById(tabId);if(!tab)return false;
@@ -616,7 +657,7 @@ function itemInTab(item,tabId){
   if(tab.type==='shop')return item.shops.includes(tabId);
   return false;
 }
-function neededCount(tabId){if(!list||tabId==='todo')return 0;return list.items.filter(i=>itemInTab(i,tabId)&&i.needed).length;}
+function neededCount(tabId){if(!list||tabId==='todo'||tabId.startsWith('cl_'))return 0;return list.items.filter(i=>itemInTab(i,tabId)&&i.needed).length;}
 function catList(){return list&&list.cats.length?list.cats:DEFAULT_CATS.slice()}
 
 /* ══════════════════════════════════════
@@ -663,10 +704,15 @@ function renderCopyStrip(){
   let buttons=[];
   if(activeTab==='todo'){
     buttons.push({id:'cp-todo',label:'Copy To Do list',fn:`_doCopy('todo-only')`});
+  } else if(activeTab.startsWith('cl_')){
+    const lbl=escHtml(tabById(activeTab)?.label||'List');
+    buttons.push({id:'cp-cl',label:`Copy ${lbl}`,fn:`_doCopy('customlist')`});
   } else if(activeTab==='all'){
     buttons.push({id:'cp-all',label:'Copy All Shopping',fn:`_doCopy('all')`});
+  } else if(tab.type==='custom'){
+    const lbl=escHtml(tab.label);
+    buttons.push({id:'cp-custom',label:`Copy ${lbl}`,fn:`_doCopy('custom')`});
   } else {
-    // Shop tab: shop-only, and shop + unassigned
     const lbl=escHtml(tab.label);
     buttons.push({id:'cp-tab',label:`Copy ${lbl} only`,fn:`_doCopy('tab')`});
     buttons.push({id:'cp-tab-gen',label:`Copy ${lbl} + Any Shop Items`,fn:`_doCopy('tab-plus-general')`});
@@ -681,6 +727,7 @@ function renderBody(){
     return;
   }
   if(activeTab==='todo'){renderTodoBody(el);return;}
+  const _activeTabObj=tabById(activeTab);
   renderShoppingBody(el);
 }
 
@@ -785,6 +832,7 @@ function renderTodoBody(el){
   const inp=document.getElementById('todo-new');
   if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')_addTodo()});document.getElementById('todo-add-btn')?.addEventListener('click',_addTodo);}
 }
+
 
 function rowHtml(item){
   const tags=item.shops.length?item.shops.map(s=>{const t=tabById(s);return t?`<span class="shop-tag">${escHtml(t.label)}</span>`:''}).join(''):'';
@@ -937,6 +985,40 @@ function renderModal(){
       <div style="display:flex;gap:8px;margin-top:12px"><button class="m-btn red" onclick="_doDeleteList()">Remove</button><button class="m-btn grey" onclick="_closeModal()">Cancel</button></div>
     </div></div>`;
     mbgClose();return;
+  }
+
+  if(modal==='cl-add-opt'){
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>Add option <button class="modal-close" onclick="_closeModal()">✕</button></h3>
+      <label class="m-label">Title</label>
+      <input class="m-input" id="opt-title" placeholder="e.g. Maxi-Cosi Pebble 360" autocomplete="off">
+      <label class="m-label">Description (optional)</label>
+      <input class="m-input" id="opt-desc" placeholder="Any notes…" autocomplete="off">
+      <label class="m-label">Link (optional)</label>
+      <input class="m-input" id="opt-link" placeholder="https://…" type="url" autocomplete="off">
+      <label class="m-label">Price (optional)</label>
+      <input class="m-input" id="opt-price" placeholder="e.g. 299.99" inputmode="decimal" autocomplete="off">
+      <div class="m-err" id="opt-err"></div>
+      <div style="display:flex;gap:8px"><button class="m-btn green" onclick="_clSaveOpt()">Add</button><button class="m-btn grey" onclick="_closeModal()">Cancel</button></div>
+    </div></div>`;
+    mbgClose();
+    setTimeout(()=>document.getElementById('opt-title')?.focus(),50);
+    document.getElementById('opt-title')?.addEventListener('keydown',e=>{if(e.key==='Enter')_clSaveOpt()});
+    return;
+  }
+
+  if(modal==='new-custom-list'){
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>New custom list <button class="modal-close" onclick="_closeModal()">✕</button></h3>
+      <label class="m-label">Tab name</label>
+      <input class="m-input" id="cl-name-input" placeholder="e.g. Baby List" autocomplete="off">
+      <div class="m-err" id="cl-name-err"></div>
+      <div style="display:flex;gap:8px"><button class="m-btn green" onclick="_doAddCustomList()">Create</button><button class="m-btn grey" onclick="_closeModal()">Cancel</button></div>
+    </div></div>`;
+    mbgClose();
+    setTimeout(()=>document.getElementById('cl-name-input')?.focus(),50);
+    document.getElementById('cl-name-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')_doAddCustomList()});
+    return;
   }
 
   if(modal==='import'){
@@ -1097,6 +1179,7 @@ function renderModal(){
     return;
   }
 
+
   if(modal==='help'){
     let body='';
     if(modal_extra==='loading'){body='<p style="color:var(--muted)">Loading…</p>';}
@@ -1135,6 +1218,7 @@ function renderBurger(){
     <div class="burger-item" onclick="_openManage('manage-shops');_closeBurger()"><span class="burger-item-icon">🏪</span><span>Edit shops</span></div>
     <div class="burger-item" onclick="_openManage('manage-cats');_closeBurger()"><span class="burger-item-icon">📋</span><span>Edit categories</span></div>
     <div class="burger-item" onclick="_openImport();_closeBurger()"><span class="burger-item-icon">📥</span><span>Import from clipboard</span></div>
+    <div class="burger-item" onclick="_openModal('new-custom-list');_closeBurger()"><span class="burger-item-icon">📝</span><span>New custom list</span></div>
     ${hasUndo?`<div class="burger-item" style="color:var(--accent-amber)" onclick="_doUndo();_closeBurger()"><span class="burger-item-icon">↩</span><span>Undo last action</span></div>`:''}
     `:''}
     <div class="burger-section-label">App</div>
@@ -1234,7 +1318,7 @@ window._copyListId=()=>{if(!list||!list.listId)return;_clipCopy(list.listId,'cop
 ══════════════════════════════════════ */
 window._toggleItem=id=>{if(!list)return;const i=list.items.find(x=>x.id===id);if(i){i.needed=!i.needed;persistList();render();}};
 window._askDelete=id=>{confirmId=id;confirmClear=false;editId=null;editDraft=null;render()};
-window._cancelConfirm=()=>{confirmId=null;confirmClear=false;confirmDelete=null;confirmTodoDel=null;render()};
+window._cancelConfirm=()=>{confirmId=null;confirmClear=false;confirmDelete=null;confirmTodoDel=null;modal_extra=null;render()};
 window._doDelete=id=>{if(!list)return;pushUndo('Delete item');list.items=list.items.filter(i=>i.id!==id);confirmId=null;persistList();render()};
 window._askClear=()=>{confirmClear='delete';confirmId=null;editId=null;editDraft=null;render()};
 window._askToggleOff=()=>{confirmClear='toggle';confirmId=null;editId=null;editDraft=null;render()};
@@ -1355,6 +1439,199 @@ window._doDeleteTodo=id=>{if(!list)return;list.todoItems=list.todoItems.filter(t
 window._clearDoneTodos=()=>{if(!list)return;list.todoItems=list.todoItems.filter(t=>!t.done);persistList();render()};
 
 /* ══════════════════════════════════════
+   CUSTOM LIST RENDER
+══════════════════════════════════════ */
+function renderCustomBody(el,tab){
+  if(!list){el.innerHTML='';return;}
+  const clData=(list.customLists||[]).find(c=>c.id===tab.id);
+  if(!clData){el.innerHTML='<div class="empty">Custom list not found.</div>';return;}
+
+  const undoBtn=undoStack.length?`<button class="tool-btn undo" onclick="_doUndo()">↩ Undo</button>`:'';
+  let h=renderCopyStrip();
+  h+=`<div class="cl-add-area"><input class="cl-input" id="cl-new" placeholder="Add item…" type="text" autocomplete="off"><button class="add-ok" id="cl-add-btn">+</button></div>`;
+  h+=`<div class="cl-toolbar">${undoBtn}</div>`;
+
+  const items=clData.items||[];
+  const notGot=items.filter(it=>!it.got);
+  const got=items.filter(it=>it.got);
+
+  function renderClItem(it){
+    // Confirm delete row
+    if(confirmId===it.id){
+      return`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(it.name)}"?</span><button class="cy" onclick="_clDoDelete('${clData.id}',${it.id})">Remove</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
+    }
+    const anyOptGot=(it.options||[]).some(o=>o.got);
+    const isEditing=(editId===it.id);
+    const donationBadge=it.donation?`<span class="cl-donation">Donation promised</span>`:'';
+
+    // Options HTML
+    let optHtml='';
+    const opts=it.options||[];
+    if(opts.length){
+      let optsInner='';
+      opts.forEach((opt,oi)=>{
+        const otherGot=anyOptGot&&!opt.got;
+        const cls=opt.got?'opt-got':(otherGot?'opt-other-got':'');
+        optsInner+=`<div class="cl-option ${cls}">
+          <div class="cl-option-row">
+            <button class="cl-opt-check${opt.got?' ticked':''}" onclick="_clToggleOpt('${clData.id}',${it.id},${oi})">${opt.got?'✓':''}</button>
+            <div class="cl-option-info">
+              <div class="cl-option-title">${escHtml(opt.title||'')}${ opt.got?` <span style="font-size:11px;color:var(--accent);font-weight:700">✓ Got this</span>`:''}</div>
+              ${opt.desc?`<div class="cl-option-desc">${escHtml(opt.desc)}</div>`:''}
+              ${opt.link?`<a class="cl-option-link" href="${escAttr(opt.link)}" target="_blank">🔗 ${escHtml(opt.link)}</a>`:''}
+              ${opt.price?`<div class="cl-option-price">€${escHtml(opt.price)}</div>`:''}
+            </div>
+            <button class="icon-btn" onclick="_clDeleteOpt('${clData.id}',${it.id},${oi})">✕</button>
+          </div>
+        </div>`;
+      });
+      optHtml=`<div class="cl-options">${optsInner}<button class="cl-add-opt-btn" onclick="_clAddOpt('${clData.id}',${it.id})">+ Add option</button></div>`;
+    } else {
+      optHtml=`<div class="cl-options"><button class="cl-add-opt-btn" onclick="_clAddOpt('${clData.id}',${it.id})">+ Add option</button></div>`;
+    }
+
+    // Edit panel
+    let editHtml='';
+    if(isEditing&&editDraft){
+      editHtml=`<div class="cl-edit-panel">
+        <div class="edit-label">Item name</div>
+        <input class="edit-input" id="cl-ep-name" value="${escAttr(editDraft.name||'')}">
+        <div style="display:flex;gap:8px;margin-top:10px"><button class="edit-save" onclick="_clSaveEdit('${clData.id}',${it.id})">Save</button><button class="edit-cancel" onclick="_closeEdit()">Cancel</button></div>
+      </div>`;
+    }
+
+    return`<div class="cl-card${it.got?' got':''}">
+      <div class="cl-card-head">
+        <div class="cl-check-wrap">
+          <button class="cl-check${it.got?' ticked':''}" onclick="_clToggleGot('${clData.id}',${it.id})">${it.got?'✓':''}</button>
+          <span class="cl-check-label">Got it</span>
+        </div>
+        <div class="cl-card-title">${escHtml(it.name)}</div>
+        ${donationBadge}
+        <div class="cl-card-actions">
+          <button class="icon-btn" onclick="_clOpenEdit('${clData.id}',${it.id})">✎</button>
+          <button class="icon-btn" title="Toggle donation promised" onclick="_clToggleDonation('${clData.id}',${it.id})">🤝</button>
+          <button class="icon-btn" onclick="_clAskDelete('${clData.id}',${it.id})">✕</button>
+        </div>
+      </div>
+      ${optHtml}
+      ${editHtml}
+    </div>`;
+  }
+
+  if(!items.length){h+=`<div class="empty">No items yet.</div>`;}
+  else{
+    notGot.forEach(it=>{h+=renderClItem(it)});
+    if(notGot.length&&got.length)h+=`<div class="divider" style="margin:4px 0"></div>`;
+    got.forEach(it=>{h+=renderClItem(it)});
+  }
+
+  el.innerHTML=h;
+  const inp=document.getElementById('cl-new');
+  if(inp){
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')_clAddItem(clData.id)});
+    document.getElementById('cl-add-btn')?.addEventListener('click',()=>_clAddItem(clData.id));
+  }
+  if(editId!==null){
+    const en=document.getElementById('cl-ep-name');
+    if(en){en.focus();en.select();en.addEventListener('input',e=>{if(editDraft)editDraft.name=e.target.value});}
+  }
+}
+
+/* ══════════════════════════════════════
+   CUSTOM LIST HANDLERS
+══════════════════════════════════════ */
+function _getClData(clId){return(list.customLists||[]).find(c=>c.id===clId);}
+function _getClItem(clId,itemId){const cl=_getClData(clId);return cl?(cl.items||[]).find(i=>i.id===itemId):null;}
+
+function _clAddItem(clId){
+  if(!list)return;
+  const inp=document.getElementById('cl-new');
+  const name=(inp?.value||'').trim();if(!name)return;
+  const cl=_getClData(clId);if(!cl)return;
+  if(!cl.items)cl.items=[];
+  cl.items.push({id:list.nextCustomId++,name,got:false,donation:false,options:[]});
+  inp.value='';
+  persistList();render();
+  setTimeout(()=>document.getElementById('cl-new')?.focus(),30);
+}
+window._clToggleGot=(clId,itemId)=>{
+  if(!list)return;
+  const it=_getClItem(clId,itemId);if(!it)return;
+  it.got=!it.got;
+  if(!it.got)(it.options||[]).forEach(o=>o.got=false);
+  persistList();render();
+};
+window._clToggleDonation=(clId,itemId)=>{
+  if(!list)return;
+  const it=_getClItem(clId,itemId);if(!it)return;
+  it.donation=!it.donation;persistList();render();
+};
+window._clAddOpt=(clId,itemId)=>{
+  modal='cl-add-opt';modal_extra={clId,itemId};render();
+};
+window._clToggleOpt=(clId,itemId,optIdx)=>{
+  if(!list)return;
+  const it=_getClItem(clId,itemId);if(!it||!it.options)return;
+  const wasGot=it.options[optIdx].got;
+  it.options.forEach(o=>o.got=false);
+  if(!wasGot){it.options[optIdx].got=true;it.got=true;}
+  else{it.got=false;}
+  persistList();render();
+};
+window._clDeleteOpt=(clId,itemId,optIdx)=>{
+  if(!list)return;
+  const it=_getClItem(clId,itemId);if(!it||!it.options)return;
+  it.options.splice(optIdx,1);
+  if(!(it.options||[]).some(o=>o.got))it.got=false;
+  persistList();render();
+};
+window._clAskDelete=(clId,itemId)=>{confirmId=itemId;modal_extra={clId};render();};
+window._clDoDelete=(clId,itemId)=>{
+  if(!list)return;
+  pushUndo('Delete item');
+  const cl=_getClData(clId);if(!cl)return;
+  cl.items=(cl.items||[]).filter(i=>i.id!==itemId);
+  confirmId=null;modal_extra=null;persistList();render();
+};
+window._clOpenEdit=(clId,itemId)=>{
+  if(editId===itemId){_closeEdit();return;}
+  const it=_getClItem(clId,itemId);if(!it)return;
+  editId=itemId;editDraft={name:it.name,clId};render();
+};
+window._clSaveEdit=(clId,itemId)=>{
+  if(!list||!editDraft)return;
+  const it=_getClItem(clId,itemId);if(!it)return;
+  const en=document.getElementById('cl-ep-name');
+  if(en)editDraft.name=en.value.trim()||it.name;
+  it.name=editDraft.name;
+  editId=null;editDraft=null;persistList();render();
+};
+window._clSaveOpt=()=>{
+  if(!list||!modal_extra)return;
+  const {clId,itemId}=modal_extra;
+  const it=_getClItem(clId,itemId);if(!it)return;
+  const title=(document.getElementById('opt-title')?.value||'').trim();
+  if(!title){document.getElementById('opt-err').textContent='Title is required.';return;}
+  const desc=document.getElementById('opt-desc')?.value.trim()||'';
+  const link=document.getElementById('opt-link')?.value.trim()||'';
+  const price=document.getElementById('opt-price')?.value.trim()||'';
+  it.options.push({title,desc,link,price,got:false});
+  persistList();_closeModal();render();
+};
+window._doAddCustomList=()=>{
+  if(!list)return;
+  const nameEl=document.getElementById('cl-name-input');
+  const errEl=document.getElementById('cl-name-err');
+  const name=(nameEl?.value||'').trim();
+  if(!name){if(errEl)errEl.textContent='Please enter a name.';return;}
+  if(!list.customLists)list.customLists=[];
+  const id='cl_'+Date.now();
+  list.customLists.push({id,label:name,type:'custom',items:[]});
+  persistList();_closeModal();activeTab=id;render();
+};
+
+/* ══════════════════════════════════════
    COPY / EXPORT
 ══════════════════════════════════════ */
 function shopSuffix(item){
@@ -1418,6 +1695,31 @@ function buildExportTabPlusGeneral(){
   return lines.join('\n').trim();
 }
 
+function buildExportCustomList(){
+  if(!list)return'';
+  const cl=(list.customLists||[]).find(c=>c.id===activeTab);
+  if(!cl)return'';
+  const lines=[cl.label.toUpperCase(),''];
+  const items=cl.items||[];
+  if(!items.length){lines.push('(no items)');return lines.join('\n').trim();}
+  items.forEach(item=>{
+    const status=item.got?'[Got]':(item.donation?'[Donation promised]':'[ ]');
+    lines.push(`${status} ${item.name}`);
+    if(item.options&&item.options.length){
+      item.options.forEach(opt=>{
+        const os=opt.got?'  ✓':'  •';
+        let ol=`${os} ${opt.title}`;
+        if(opt.price)ol+=` — €${opt.price}`;
+        lines.push(ol);
+        if(opt.desc)lines.push(`    ${opt.desc}`);
+        if(opt.link)lines.push(`    ${opt.link}`);
+      });
+    }
+    lines.push('');
+  });
+  return lines.join('\n').trim();
+}
+
 function buildExportTodo(){
   if(!list)return'';
   const lines=['TO DO',''];
@@ -1428,6 +1730,11 @@ function buildExportTodo(){
 }
 
 window._doCopy=mode=>{
+  if(mode==='custom'){
+    const tab=tabById(activeTab);if(!tab)return;
+    _clipCopy(buildExportCustomList(),'cp-custom',`${copyIcon()} Copy ${escHtml(tab.label)}`);
+    return;
+  }
   let text='',btnId='',label='';
   const tab=tabById(activeTab);
   if(mode==='all'){text=buildExportAll();btnId='cp-all';label='Copy All Shopping';}
