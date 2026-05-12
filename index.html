@@ -728,6 +728,7 @@ function renderBody(){
   }
   if(activeTab==='todo'){renderTodoBody(el);return;}
   const _activeTabObj=tabById(activeTab);
+  if(_activeTabObj&&_activeTabObj.type==='custom'){renderCustomBody(el,_activeTabObj);return;}
   renderShoppingBody(el);
 }
 
