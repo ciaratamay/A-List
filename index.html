@@ -202,38 +202,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .cl-input{flex:1;font-size:15px;padding:9px 11px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--bg);color:var(--text);appearance:none;-webkit-appearance:none}
 .cl-input:focus{outline:none;border-color:var(--accent)}
 .cl-toolbar{display:flex;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--border)}
-.cl-item-card{margin:10px 12px;border:0.5px solid var(--border-md);border-radius:12px;background:var(--bg);overflow:hidden;transition:opacity 0.2s}
-.cl-item-card.got{opacity:0.5}
-.cl-item-card.got-border{border:2.5px solid var(--accent);opacity:0.6}
-.cl-item-head{display:flex;align-items:center;gap:10px;padding:12px 14px}
-.cl-item-title{flex:1;font-size:16px;font-weight:600;color:var(--text)}
-.cl-item-title.got{text-decoration:line-through;color:var(--muted)}
-.cl-check-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0}
-.cl-check-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;text-align:center;line-height:1.2;max-width:52px}
-.cl-checkbox{width:24px;height:24px;border-radius:6px;border:1.5px solid var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;font-size:14px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;flex-shrink:0}
-.cl-checkbox.ticked{background:var(--accent-green);border-color:var(--accent-green);color:#fff}
-.cl-checkbox.donated{background:var(--accent-amber);border-color:var(--accent-amber);color:#fff}
-.cl-item-actions{display:flex;gap:4px;flex-shrink:0}
-.cl-options{border-top:0.5px solid var(--border);padding:8px 12px 4px}
-.cl-option-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:0.5px solid var(--border)}
-.cl-option-row:first-child{border-top:none}
-.cl-option-row.got-opt{opacity:0.38}
-.cl-option-row.bought-opt{opacity:0.55}
+.cl-card{margin:10px 12px;border:1.5px solid var(--border-md);border-radius:12px;background:var(--bg);overflow:hidden;transition:opacity 0.2s,border-color 0.2s}
+.cl-card.is-got{opacity:0.42}
+.cl-card-body{padding:12px 14px 10px}
+.cl-card-top{display:flex;align-items:flex-start;gap:12px}
+.cl-checkbox{width:22px;height:22px;border-radius:5px;border:2px solid var(--border-md);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:13px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;margin-top:1px}
+.cl-checkbox.ticked{background:#3B6D11;border-color:#3B6D11;color:#fff}
+.cl-card-title{flex:1;font-size:16px;font-weight:600;color:var(--text);line-height:1.35}
+.cl-card.is-got .cl-card-title{text-decoration:line-through;color:var(--muted)}
+.cl-card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.cl-action-btn{font-size:12px;padding:5px 12px;border-radius:16px;border:1px solid var(--border-md);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.cl-action-btn:active{background:var(--bg2)}
+.cl-action-btn.on{background:rgba(133,79,11,0.12);color:#854F0B;border-color:#854F0B}
+.cl-action-btn.del{color:var(--accent-red);border-color:transparent}
+.cl-options{border-top:0.5px solid var(--border);padding:10px 14px 12px}
+.cl-option{border:1.5px solid var(--border-md);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg2);transition:opacity 0.2s,border-color 0.2s}
+.cl-option:last-child{margin-bottom:0}
+.cl-option.opt-got{border-color:#3B6D11;opacity:0.6}
+.cl-option.opt-other-got{opacity:0.22}
+.cl-option-row{display:flex;align-items:flex-start;gap:10px}
 .cl-option-info{flex:1;min-width:0}
 .cl-option-title{font-size:14px;font-weight:600;color:var(--text)}
-.cl-option-title.got{text-decoration:line-through;color:var(--muted)}
-.cl-option-desc{font-size:12px;color:var(--muted);margin-top:2px;word-break:break-word}
-.cl-option-link{font-size:12px;color:var(--accent);margin-top:2px;word-break:break-all;display:block}
-.cl-option-price{font-size:12px;font-weight:600;color:var(--accent-green);margin-top:3px}
-.cl-option-check{width:22px;height:22px;border-radius:5px;border:1.5px solid var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;font-size:12px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;flex-shrink:0;margin-top:2px}
-.cl-option-check.ticked{background:var(--accent);border-color:var(--accent);color:#fff}
-.cl-add-option{font-size:13px;padding:6px 12px;border:0.5px dashed var(--border-md);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;margin:6px 0 8px;width:100%;text-align:left;-webkit-tap-highlight-color:transparent}
+.cl-option-desc{font-size:12px;color:var(--muted);margin-top:3px;word-break:break-word}
+.cl-option-link{font-size:12px;color:var(--accent);margin-top:3px;word-break:break-all;text-decoration:none;display:block}
+.cl-option-price{font-size:13px;font-weight:700;color:#3B6D11;margin-top:4px}
+.cl-opt-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border-md);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:11px;color:transparent;-webkit-tap-highlight-color:transparent;transition:all 0.15s;margin-top:2px}
+.cl-opt-check.ticked{background:#3B6D11;border-color:#3B6D11;color:#fff}
+.cl-add-opt-btn{font-size:13px;padding:8px 12px;border:1px dashed var(--border-md);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;width:100%;text-align:left;margin-top:8px;-webkit-tap-highlight-color:transparent}
 .cl-edit-panel{background:var(--bg2);border-top:0.5px solid var(--border);padding:14px}
-.cl-edit-row{display:flex;gap:8px;margin-bottom:10px}
-.cl-edit-input{flex:1;font-size:14px;padding:8px 10px;border:0.5px solid var(--border-md);border-radius:8px;background:var(--bg);color:var(--text);appearance:none;-webkit-appearance:none}
-.cl-edit-input:focus{outline:none;border-color:var(--accent)}
-.cl-opt-edit-block{background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px;position:relative}
-.cl-opt-edit-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;display:flex;justify-content:space-between;align-items:center}
 
 /* BURGER */
 .burger-menu-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200}
@@ -1457,62 +1453,49 @@ function renderCustomBody(el,tab){
   const got=items.filter(it=>it.got);
 
   function renderClItem(it){
-    // Confirm delete row
     if(confirmId===it.id){
       return`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(it.name)}"?</span><button class="cy" onclick="_clDoDelete('${clData.id}',${it.id})">Remove</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
     }
     const anyOptGot=(it.options||[]).some(o=>o.got);
     const isEditing=(editId===it.id);
-    const donationBadge=it.donation?`<span class="cl-donation">Donation promised</span>`:'';
 
-    // Options HTML
-    let optHtml='';
+    // Options
     const opts=it.options||[];
-    if(opts.length){
-      let optsInner='';
-      opts.forEach((opt,oi)=>{
-        const otherGot=anyOptGot&&!opt.got;
-        const cls=opt.got?'opt-got':(otherGot?'opt-other-got':'');
-        optsInner+=`<div class="cl-option ${cls}">
-          <div class="cl-option-row">
-            <button class="cl-opt-check${opt.got?' ticked':''}" onclick="_clToggleOpt('${clData.id}',${it.id},${oi})">${opt.got?'✓':''}</button>
-            <div class="cl-option-info">
-              <div class="cl-option-title">${escHtml(opt.title||'')}${ opt.got?` <span style="font-size:11px;color:var(--accent);font-weight:700">✓ Got this</span>`:''}</div>
-              ${opt.desc?`<div class="cl-option-desc">${escHtml(opt.desc)}</div>`:''}
-              ${opt.link?`<a class="cl-option-link" href="${escAttr(opt.link)}" target="_blank">🔗 ${escHtml(opt.link)}</a>`:''}
-              ${opt.price?`<div class="cl-option-price">€${escHtml(opt.price)}</div>`:''}
-            </div>
-            <button class="icon-btn" onclick="_clDeleteOpt('${clData.id}',${it.id},${oi})">✕</button>
+    let optsInner='';
+    opts.forEach((opt,oi)=>{
+      const cls=opt.got?'opt-got':(anyOptGot&&!opt.got?'opt-other-got':'');
+      optsInner+=`<div class="cl-option ${cls}">
+        <div class="cl-option-row">
+          <button class="cl-opt-check${opt.got?' ticked':''}" onclick="_clToggleOpt('${clData.id}',${it.id},${oi})">${opt.got?'✓':''}</button>
+          <div class="cl-option-info">
+            <div class="cl-option-title">${escHtml(opt.title||'')}${opt.got?' <span style="font-size:11px;color:#3B6D11;font-weight:600">✓ chosen</span>':''}</div>
+            ${opt.price?`<div class="cl-option-price">€${escHtml(opt.price)}</div>`:''}
+            ${opt.desc?`<div class="cl-option-desc">${escHtml(opt.desc)}</div>`:''}
+            ${opt.link?`<a class="cl-option-link" href="${escAttr(opt.link)}" target="_blank">🔗 ${escHtml(opt.link)}</a>`:''}
           </div>
-        </div>`;
-      });
-      optHtml=`<div class="cl-options">${optsInner}<button class="cl-add-opt-btn" onclick="_clAddOpt('${clData.id}',${it.id})">+ Add option</button></div>`;
-    } else {
-      optHtml=`<div class="cl-options"><button class="cl-add-opt-btn" onclick="_clAddOpt('${clData.id}',${it.id})">+ Add option</button></div>`;
-    }
+          <button class="icon-btn" onclick="_clDeleteOpt('${clData.id}',${it.id},${oi})">✕</button>
+        </div>
+      </div>`;
+    });
+    const optHtml=`<div class="cl-options">${optsInner}<button class="cl-add-opt-btn" onclick="_clAddOpt('${clData.id}',${it.id})">+ Add option</button></div>`;
 
     // Edit panel
-    let editHtml='';
-    if(isEditing&&editDraft){
-      editHtml=`<div class="cl-edit-panel">
-        <div class="edit-label">Item name</div>
-        <input class="edit-input" id="cl-ep-name" value="${escAttr(editDraft.name||'')}">
-        <div style="display:flex;gap:8px;margin-top:10px"><button class="edit-save" onclick="_clSaveEdit('${clData.id}',${it.id})">Save</button><button class="edit-cancel" onclick="_closeEdit()">Cancel</button></div>
-      </div>`;
-    }
+    const editHtml=isEditing&&editDraft?`<div class="cl-edit-panel">
+      <div class="edit-label">Item name</div>
+      <input class="edit-input" id="cl-ep-name" value="${escAttr(editDraft.name||'')}">
+      <div style="display:flex;gap:8px;margin-top:10px"><button class="edit-save" onclick="_clSaveEdit('${clData.id}',${it.id})">Save</button><button class="edit-cancel" onclick="_closeEdit()">Cancel</button></div>
+    </div>`:'';
 
-    return`<div class="cl-card${it.got?' got':''}">
-      <div class="cl-card-head">
-        <div class="cl-check-wrap">
-          <button class="cl-check${it.got?' ticked':''}" onclick="_clToggleGot('${clData.id}',${it.id})">${it.got?'✓':''}</button>
-          <span class="cl-check-label">Got it</span>
+    return`<div class="cl-card${it.got?' is-got':''}">
+      <div class="cl-card-body">
+        <div class="cl-card-top">
+          <button class="cl-checkbox${it.got?' ticked':''}" onclick="_clToggleGot('${clData.id}',${it.id})">${it.got?'✓':''}</button>
+          <div class="cl-card-title">${escHtml(it.name)}</div>
         </div>
-        <div class="cl-card-title">${escHtml(it.name)}</div>
-        ${donationBadge}
         <div class="cl-card-actions">
-          <button class="icon-btn" onclick="_clOpenEdit('${clData.id}',${it.id})">✎</button>
-          <button class="icon-btn" title="Toggle donation promised" onclick="_clToggleDonation('${clData.id}',${it.id})">🤝</button>
-          <button class="icon-btn" onclick="_clAskDelete('${clData.id}',${it.id})">✕</button>
+          <button class="cl-action-btn${it.donation?' on':''}" onclick="_clToggleDonation('${clData.id}',${it.id})">🤝 Donation promised</button>
+          <button class="cl-action-btn" onclick="_clOpenEdit('${clData.id}',${it.id})">✎ Edit</button>
+          <button class="cl-action-btn del" onclick="_clAskDelete('${clData.id}',${it.id})">✕ Remove</button>
         </div>
       </div>
       ${optHtml}
