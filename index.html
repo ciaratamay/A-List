@@ -449,7 +449,7 @@ function openList(localId){
   if(!list)return;
   activeLocalId=localId;ss('sl_active_local',localId);
   resetUIState();
-  if(list.isShared&&list.listId)subscribeFirestore(list.listId);
+  if(list.isShared&&list.listId)subscribeFirestore();
   render();
 }
 
@@ -519,22 +519,42 @@ if(activeLocalId&&allLists.find(l=>l.localId===activeLocalId)){
 ══════════════════════════════════════ */
 let firestoreUnsub=null,syncStatus='off',isSyncingFromRemote=false;
 
+// Derive the Firestore document path from the list ID + password.
+// Only someone with BOTH can compute this address, so the password itself
+// never needs to be stored in Firestore. Requires a secure context (https).
+async function derivePath(listId,pw){
+  const data=new TextEncoder().encode(String(listId)+'::'+String(pw));
+  const buf=await crypto.subtle.digest('SHA-256',data);
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
 function firestorePayload(){
   if(!list)return{};
-  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId,updatedAt:Date.now(),pw:list.pw||null,name:list.name};
+  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId,updatedAt:Date.now(),name:list.name};
 }
 
 async function pushToFirestore(){
   if(!list||!list.isShared||!list.listId||isSyncingFromRemote)return;
   syncStatus='syncing';renderSyncBar();
-  try{await setDoc(doc(db,'lists',list.listId),firestorePayload());syncStatus='live';renderSyncBar();}
+  try{
+    const path=await derivePath(list.listId,list.pw);
+    await setDoc(doc(db,'lists',path),firestorePayload());
+    syncStatus='live';renderSyncBar();
+  }
   catch(e){console.error(e);syncStatus='error';renderSyncBar();}
 }
 
-function subscribeFirestore(listId){
+async function subscribeFirestore(){
+  if(!list||!list.listId)return;
+  const targetLocal=list.localId,targetId=list.listId,targetPw=list.pw;
   if(firestoreUnsub){firestoreUnsub();firestoreUnsub=null;}
   syncStatus='syncing';renderSyncBar();
-  firestoreUnsub=onSnapshot(doc(db,'lists',listId),snap=>{
+  let path;
+  try{path=await derivePath(targetId,targetPw);}
+  catch(e){console.error(e);syncStatus='error';renderSyncBar();return;}
+  // If the active list changed while we were hashing, a newer subscribe owns the listener — abort.
+  if(!list||list.localId!==targetLocal)return;
+  firestoreUnsub=onSnapshot(doc(db,'lists',path),snap=>{
     if(!snap.exists()){syncStatus='error';renderSyncBar();return;}
     const d=snap.data();isSyncingFromRemote=true;
     if(!list){isSyncingFromRemote=false;return;}
@@ -549,22 +569,24 @@ function subscribeFirestore(listId){
   },err=>{console.error(err);syncStatus='error';renderSyncBar();});
 }
 
-if(list&&list.isShared&&list.listId)subscribeFirestore(list.listId);
+if(list&&list.isShared&&list.listId)subscribeFirestore();
 
 async function doShareListAction(password,hint){
   if(!list)return;
   const listId=generateListId(list.name);
   list.listId=listId;list.pw=password;list.pwHint=hint||null;list.isShared=true;
-  await setDoc(doc(db,'lists',listId),firestorePayload());
-  persistList();subscribeFirestore(listId);
+  const path=await derivePath(listId,password);
+  await setDoc(doc(db,'lists',path),firestorePayload());
+  persistList();subscribeFirestore();
 }
 
 async function doJoinSharedList(listId,password){
-  const snap=await getDoc(doc(db,'lists',listId));
-  if(!snap.exists())throw new Error('List not found. Check the ID.');
+  const path=await derivePath(listId,password);
+  const snap=await getDoc(doc(db,'lists',path));
+  // A wrong password produces a different (non-existent) path, so "not found"
+  // covers both a bad ID and a bad password — we can't tell them apart, which is fine.
+  if(!snap.exists())throw new Error('List not found. Check the ID and password.');
   const data=snap.data();
-  if(!data.pw)throw new Error('This list has no password — ask the owner to reshare it.');
-  if(data.pw!==password)throw new Error('Wrong password.');
   const localId='list_'+Date.now();
   const name=data.name||listId;
   list={localId,name,listId,pw:password,pwHint:null,isShared:true,
@@ -575,7 +597,7 @@ async function doJoinSharedList(listId,password){
   ss('sl_all_lists',allLists);
   ss('sl_list_'+localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,nextId:list.nextId,nextTodoId:list.nextTodoId});
   activeLocalId=localId;ss('sl_active_local',localId);
-  resetUIState();subscribeFirestore(listId);render();
+  resetUIState();subscribeFirestore();render();
 }
 
 /* ══════════════════════════════════════
@@ -707,7 +729,11 @@ function renderShoppingBody(el){
   </div>`;
 
   if(pendingAdd){
-    h+=`<div class="confirm-row"><span class="confirm-msg">"${escHtml(pendingAdd.existingName)}" already exists. Still add "${escHtml(pendingAdd.name)}"?</span><button class="cy" onclick="_confirmAdd()">Add anyway</button><button class="cn" onclick="_cancelAdd()">Cancel</button></div>`;
+    if(pendingAdd.alreadyOn){
+      h+=`<div class="confirm-row"><span class="confirm-msg">"${escHtml(pendingAdd.existingName)}" is already on your list.</span><button class="cn" onclick="_cancelAdd()">OK</button></div>`;
+    } else {
+      h+=`<div class="confirm-row"><span class="confirm-msg">Found "${escHtml(pendingAdd.existingName)}" — toggle it on?</span><button class="cy" onclick="_confirmAdd()">Yes</button><button class="cn" onclick="_cancelAdd()">No</button></div>`;
+    }
   }
 
   // TOOLBAR
@@ -1287,7 +1313,7 @@ function _addItem(){
   const shops=[...addDraftShops];
   const cat=ce?ce.value:catList()[0];
   const similar=findSimilar(name);
-  if(similar){pendingAdd={name,cat,shops,existingName:similar.name};addNameDraft=name;render();return;}
+  if(similar){pendingAdd={existingId:similar.id,existingName:similar.name,alreadyOn:!!similar.needed};addNameDraft=name;render();return;}
   _doAdd(name,cat,shops);
 }
 function _doAdd(name,cat,shops){
@@ -1297,7 +1323,14 @@ function _doAdd(name,cat,shops){
   persistList();render();
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
 }
-window._confirmAdd=()=>{if(!pendingAdd)return;_doAdd(pendingAdd.name,pendingAdd.cat,pendingAdd.shops)};
+window._confirmAdd=()=>{
+  if(!pendingAdd||!list)return;
+  const it=list.items.find(i=>i.id===pendingAdd.existingId);
+  if(it)it.needed=true;
+  pendingAdd=null;addNameDraft='';
+  persistList();render();
+  setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
+};
 window._cancelAdd=()=>{pendingAdd=null;render();setTimeout(()=>{const e=document.getElementById('new-name');if(e)e.focus()},30)};
 
 /* ══════════════════════════════════════
