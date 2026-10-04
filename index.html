@@ -75,7 +75,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 
 /* ITEMS */
 .sec-head{padding:8px 14px 4px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em}
-.item-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:0.5px solid var(--border);background:var(--bg);min-height:52px}
+.item-row{display:flex;align-items:center;gap:8px;padding:12px 14px;border-top:0.5px solid var(--border);background:var(--bg);min-height:52px}
 .item-info{flex:1;min-width:0}
 .item-name{font-size:16px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item-name.needed{font-weight:600}
@@ -85,6 +85,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .toggle::after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
 .toggle.on::after{transform:translateX(20px)}
 .icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:6px;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
+.star-btn{font-size:19px}
+.star-btn.on{color:#f5c518}
+/* ORDER BY CATEGORIES TOGGLE */
+.cat-toggle-row{padding:2px 12px 9px;border-bottom:0.5px solid var(--border)}
+.cat-toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.cat-toggle input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+/* LIST SUMMARY BOX */
+.summary-box{padding:12px 14px;background:var(--bg2);border-bottom:0.5px solid var(--border);display:flex;align-items:flex-start;gap:10px}
+.summary-text{flex:1;font-size:14px;color:var(--text);line-height:1.5}
+.summary-actions{display:flex;gap:4px;flex-shrink:0}
+.summary-copy-btn{font-size:12px;padding:5px 10px;border:0.5px solid var(--border-md);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.summary-copy-btn.done{color:var(--accent-green);border-color:var(--accent-green)}
+.summary-hide-btn{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;line-height:1;-webkit-tap-highlight-color:transparent}
+.summary-collapsed{padding:8px 14px;background:var(--bg2);border-bottom:0.5px solid var(--border);font-size:13px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.summary-arrow{font-size:11px}
 .confirm-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:0.5px solid var(--border);background:#5a1a1a;flex-wrap:wrap}
 .confirm-msg{flex:1;font-size:14px;color:#ffcccc;min-width:140px}
 .cy{font-size:13px;padding:7px 14px;background:var(--accent-red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600}
@@ -626,6 +641,7 @@ let editId=null,editDraft=null;
 let addDraftShops=[],pendingAdd=null,addNameDraft='';
 let modal=null,burgerOpen=false,confirmTodoDel=null;
 let modal_deleteLocalId=null,modal_extra=null;
+let groupByCat=ls('sl_group_by_cat',true),summaryCollapsed=ls('sl_summary_collapsed',false);
 
 /* ══════════════════════════════════════
    ACCESSORS
@@ -708,13 +724,14 @@ function renderBody(){
 
 function renderShoppingBody(el){
   const tab=tabById(activeTab);
-  const visible=list.items.filter(i=>itemInTab(i,activeTab)).slice().sort((a,b)=>a.name.localeCompare(b.name));
-  const needed=visible.filter(i=>i.needed);
-  const notNeeded=visible.filter(i=>!i.needed);
+  const visible=list.items.filter(i=>itemInTab(i,activeTab));
   let h='';
 
   // COPY STRIP
   h+=renderCopyStrip();
+
+  // LIST SUMMARY (All Shopping tab only)
+  if(activeTab==='all')h+=renderSummaryBox();
 
   // ADD AREA — preserve addNameDraft to prevent erasure when toggling shop chips
   const co=catList().map((c,i)=>`<option${i===0?' selected':''}>${escHtml(c)}</option>`).join('');
@@ -752,6 +769,9 @@ function renderShoppingBody(el){
     ${undoBtn}
   </div>`;
 
+  // ORDER BY CATEGORIES toggle
+  h+=`<div class="cat-toggle-row"><label class="cat-toggle"><input type="checkbox" ${groupByCat?'checked':''} onchange="_setGroupByCat(this.checked)"> <span>Order by categories</span></label></div>`;
+
   if(confirmClear==='toggle'){
     h+=`<div class="confirm-row"><span class="confirm-msg">Toggle all needed items off in ${escHtml(tab?tab.label:'this list')}?</span><button class="cy" onclick="_doToggleOff()">Toggle off</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
   }
@@ -761,11 +781,32 @@ function renderShoppingBody(el){
 
   // LIST
   if(!visible.length){h+=`<div class="empty">No items yet.</div>`;}
-  else if(sortAlpha){h+=catBlock(buildCatMap(visible));}
-  else{
-    if(needed.length)h+=catBlock(buildCatMap(needed));
-    if(needed.length&&notNeeded.length)h+=`<div class="divider"></div>`;
-    if(notNeeded.length)h+=catBlock(buildCatMap(notNeeded));
+  else if(groupByCat){
+    // Grouped by category
+    if(sortAlpha){
+      // A–Z: pure alphabetical within each category (stars don't reorder)
+      h+=catBlock(buildCatMap(visible.slice().sort(cmpName)));
+    } else {
+      // Needed first: needed section, divider, not-needed section; starred first within each category
+      const needed=visible.filter(i=>i.needed).slice().sort(cmpStarName);
+      const notNeeded=visible.filter(i=>!i.needed).slice().sort(cmpStarName);
+      if(needed.length)h+=catBlock(buildCatMap(needed));
+      if(needed.length&&notNeeded.length)h+=`<div class="divider"></div>`;
+      if(notNeeded.length)h+=catBlock(buildCatMap(notNeeded));
+    }
+  } else {
+    // Flat — no category headers
+    if(sortAlpha){
+      // Full list A–Z, needed and not-needed mixed (stars don't reorder)
+      visible.slice().sort(cmpName).forEach(item=>{h+=rowHtml(item)});
+    } else {
+      // Needed first: starred-needed, needed, (divider), starred-not-needed, not-needed
+      const needed=visible.filter(i=>i.needed).slice().sort(cmpStarName);
+      const notNeeded=visible.filter(i=>!i.needed).slice().sort(cmpStarName);
+      needed.forEach(item=>{h+=rowHtml(item)});
+      if(needed.length&&notNeeded.length)h+=`<div class="divider"></div>`;
+      notNeeded.forEach(item=>{h+=rowHtml(item)});
+    }
   }
 
   el.innerHTML=h;
@@ -820,7 +861,8 @@ function rowHtml(item){
   if(confirmId===item.id){
     h+=`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(item.name)}"?</span><button class="cy" onclick="_doDelete(${item.id})">Remove</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
   } else {
-    h+=`<div class="item-row"><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="_toggleItem(${item.id})"></button><button class="icon-btn" onclick="_openEdit(${item.id})">✎</button><button class="icon-btn" onclick="_askDelete(${item.id})">✕</button></div>`;
+    const starOn=!!item.starred;
+    h+=`<div class="item-row"><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="_toggleItem(${item.id})"></button><button class="icon-btn star-btn${starOn?' on':''}" onclick="_toggleStar(${item.id})" title="${starOn?'Unstar':'Star'}">${starOn?'★':'☆'}</button><button class="icon-btn" onclick="_openEdit(${item.id})">✎</button><button class="icon-btn" onclick="_askDelete(${item.id})">✕</button></div>`;
   }
   if(editId===item.id&&editDraft){
     const co=catList().map(c=>`<option${c===editDraft.cat?' selected':''}>${escHtml(c)}</option>`).join('');
@@ -850,6 +892,58 @@ function buildCatMap(items){
   const m={};catList().forEach(c=>{m[c]=[]});
   items.forEach(i=>{const c=i.cat&&m[i.cat]!==undefined?i.cat:'Uncategorised';if(!m[c])m[c]=[];m[c].push(i)});
   return m;
+}
+
+// Sort comparators
+function cmpName(a,b){return a.name.localeCompare(b.name);}
+function cmpStarName(a,b){return ((b.starred?1:0)-(a.starred?1:0))||a.name.localeCompare(b.name);}
+
+/* ══════════════════════════════════════
+   LIST SUMMARY
+══════════════════════════════════════ */
+function fmtShopList(arr){
+  if(!arr.length)return'';
+  if(arr.length===1)return arr[0];
+  if(arr.length===2)return arr[0]+' and '+arr[1];
+  return arr.slice(0,-1).join(', ')+' and '+arr[arr.length-1];
+}
+
+function buildListSummary(){
+  if(!list)return'';
+  const entries=[];
+  list.shopTabs.forEach(t=>{
+    const hasNeeded=list.items.some(i=>i.needed&&i.shops.includes(t.id));
+    if(!hasNeeded)return;
+    const hasStarred=list.items.some(i=>i.needed&&i.starred&&i.shops.includes(t.id));
+    entries.push({label:t.label,hasStarred});
+  });
+  // Items with no shop assigned
+  const anyNeeded=list.items.some(i=>i.needed&&i.shops.length===0);
+  if(anyNeeded){
+    const anyStarred=list.items.some(i=>i.needed&&i.starred&&i.shops.length===0);
+    entries.push({label:'Any Shop',hasStarred:anyStarred});
+  }
+  const starred=entries.filter(e=>e.hasStarred).map(e=>e.label);
+  const other=entries.filter(e=>!e.hasStarred).map(e=>e.label);
+  if(!starred.length&&!other.length)return'Nothing needed right now.';
+  if(starred.length&&other.length)return`You need starred items in ${fmtShopList(starred)}, and other items in ${fmtShopList(other)}.`;
+  if(starred.length)return`You need starred items in ${fmtShopList(starred)}.`;
+  return`You need items in ${fmtShopList(other)}.`;
+}
+
+function renderSummaryBox(){
+  if(!list)return'';
+  if(summaryCollapsed){
+    return`<div class="summary-collapsed" onclick="_toggleSummary()"><span>Show list summary</span><span class="summary-arrow">▾</span></div>`;
+  }
+  const summary=buildListSummary();
+  return`<div class="summary-box">
+    <div class="summary-text">${escHtml(summary)}</div>
+    <div class="summary-actions">
+      <button class="summary-copy-btn" id="summary-copy-btn" onclick="_copySummary()">${copyIcon()} Copy</button>
+      <button class="summary-hide-btn" onclick="_toggleSummary()" title="Hide">✕</button>
+    </div>
+  </div>`;
 }
 
 /* ══════════════════════════════════════
@@ -1259,6 +1353,10 @@ window._copyListId=()=>{if(!list||!list.listId)return;_clipCopy(list.listId,'cop
    ITEM ACTIONS
 ══════════════════════════════════════ */
 window._toggleItem=id=>{if(!list)return;const i=list.items.find(x=>x.id===id);if(i){i.needed=!i.needed;persistList();render();}};
+window._toggleStar=id=>{if(!list)return;const i=list.items.find(x=>x.id===id);if(i){i.starred=!i.starred;persistList();render();}};
+window._setGroupByCat=v=>{groupByCat=!!v;ss('sl_group_by_cat',groupByCat);render();};
+window._toggleSummary=()=>{summaryCollapsed=!summaryCollapsed;ss('sl_summary_collapsed',summaryCollapsed);render();};
+window._copySummary=()=>{_clipCopy(buildListSummary(),'summary-copy-btn',`${copyIcon()} Copy`);};
 window._askDelete=id=>{confirmId=id;confirmClear=false;editId=null;editDraft=null;render()};
 window._cancelConfirm=()=>{confirmId=null;confirmClear=false;confirmDelete=null;confirmTodoDel=null;render()};
 window._doDelete=id=>{if(!list)return;pushUndo('Delete item');list.items=list.items.filter(i=>i.id!==id);confirmId=null;persistList();render()};
@@ -1318,7 +1416,7 @@ function _addItem(){
 }
 function _doAdd(name,cat,shops){
   if(!list)return;
-  list.items.push({id:list.nextId++,name,cat,shops,needed:true});
+  list.items.push({id:list.nextId++,name,cat,shops,needed:true,starred:false});
   const _curTab=tabById(activeTab);addDraftShops=(_curTab&&_curTab.type==='shop')?[activeTab]:[];pendingAdd=null;addNameDraft='';
   persistList();render();
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
@@ -1568,7 +1666,7 @@ window._runImport=()=>{
     const low=name.toLowerCase();
     const existing=list.items.find(i=>i.name.toLowerCase()===low||stemWord(i.name.toLowerCase())===stemWord(low));
     if(existing){existing.needed=true;toggled++;}
-    else{list.items.push({id:list.nextId++,name:normName(name),cat,shops,needed:true});added++;}
+    else{list.items.push({id:list.nextId++,name:normName(name),cat,shops,needed:true,starred:false});added++;}
   });
 
   persistList();_closeModal();render();
