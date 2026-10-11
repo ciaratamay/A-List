@@ -56,6 +56,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .add-shop-row{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 2px;width:100%}
 .add-sc{font-size:12px;padding:4px 10px;border:0.5px solid var(--border-md);border-radius:12px;cursor:pointer;background:var(--bg);color:var(--text);user-select:none;-webkit-tap-highlight-color:transparent}
 .add-sc.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.add-name-wrap{position:relative;flex:1;min-width:120px;display:flex}
+.add-suggest{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg);border:0.5px solid var(--border-md);border-radius:10px;box-shadow:0 6px 16px rgba(0,0,0,0.18);z-index:45;max-height:240px;overflow-y:auto}
 
 /* TOOLBAR */
 .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--border);flex-wrap:wrap}
@@ -726,12 +728,15 @@ function renderHeader(){
   const sharedBtn=list.isShared
     ?`<button class="share-btn shared" onclick="_openModal('shared-info')">${shareIcon} Shared</button>`
     :`<button class="share-btn" onclick="_openModal('share')">${shareIcon} Share</button>`;
-  const tabsHtml=allTabs().map(t=>{
+  const mealsTab=`<button class="tab${activeTab==='meals'?' active':''}" onclick="_openMeals()" title="Meal planning" aria-label="Meal planning" style="display:flex;align-items:center;justify-content:center">${plateIcon()}</button>`;
+  const tabButtons=allTabs().map(t=>{
     const n=neededCount(t.id);
     return`<button class="tab${t.id===activeTab?' active':''}" onclick="_setTab('${t.id}')">${escHtml(t.label)}${(t.type!=='todo'&&n)?`<span class="badge">${n}</span>`:''}</button>`;
-  }).join('');
-  const mealsTab=`<button class="tab${activeTab==='meals'?' active':''}" onclick="_openMeals()" title="Meal planning" aria-label="Meal planning" style="display:flex;align-items:center;justify-content:center">${plateIcon()}</button>`;
-  el.innerHTML=`<div class="header-row"><span class="header-title">${escHtml(list.name)}</span>${sharedBtn}<button class="burger-btn" onclick="_openBurger()">☰</button></div><div class="tabs">${tabsHtml}${mealsTab}</div>`;
+  });
+  // Meal planning sits second, right after "All Shopping"
+  tabButtons.splice(1,0,mealsTab);
+  const tabsHtml=tabButtons.join('');
+  el.innerHTML=`<div class="header-row"><span class="header-title">${escHtml(list.name)}</span>${sharedBtn}<button class="burger-btn" onclick="_openBurger()">☰</button></div><div class="tabs">${tabsHtml}</div>`;
 }
 
 function renderSyncBar(){
@@ -792,7 +797,7 @@ function renderShoppingBody(el){
   const addShopSel=list.shopTabs.map(t=>`<span class="add-sc${addDraftShops.includes(t.id)?' on':''}" onclick="_toggleAddShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
   h+=`<div class="add-area">
     <div class="add-row">
-      <input class="add-input" id="new-name" placeholder="Add item…" type="text" autocomplete="off" value="${escAttr(addNameDraft)}">
+      <span class="add-name-wrap"><input class="add-input" id="new-name" placeholder="Add item…" type="text" autocomplete="off" value="${escAttr(addNameDraft)}"><div class="add-suggest" id="add-suggest" style="display:none"></div></span>
       <select class="cat-sel" id="new-cat">${co}</select>
       <button class="add-ok" id="add-ok-btn">+</button>
     </div>
@@ -876,7 +881,20 @@ function renderShoppingBody(el){
   // Attach events — read name input on any interaction to preserve draft
   const nameInput=document.getElementById('new-name');
   if(nameInput){
-    nameInput.addEventListener('input',e=>{addNameDraft=e.target.value});
+    const sug=document.getElementById('add-suggest');
+    const buildSug=()=>{
+      if(!sug)return;
+      const q=nameInput.value.trim().toLowerCase();
+      if(!q){sug.innerHTML='';sug.style.display='none';return;}
+      const matches=list.items.filter(i=>i.name.toLowerCase().includes(q)).slice(0,8);
+      let html=matches.map(i=>`<div class="meal-suggest-item" onmousedown="event.preventDefault()" onclick="_pickAddSuggestion(${i.id})"><span>${escHtml(i.name)}</span><span class="ms-state">${i.needed?'on list':'off'}</span></div>`).join('');
+      const exact=list.items.some(i=>i.name.toLowerCase()===q);
+      if(!exact)html+=`<div class="meal-suggest-item create" onmousedown="event.preventDefault()" onclick="_createFromAdd()">＋ Create "${escHtml(nameInput.value.trim())}"</div>`;
+      sug.innerHTML=html;sug.style.display='block';
+    };
+    nameInput.addEventListener('input',e=>{addNameDraft=e.target.value;buildSug();});
+    nameInput.addEventListener('focus',buildSug);
+    nameInput.addEventListener('blur',()=>{setTimeout(()=>{if(sug)sug.style.display='none';},200);});
     nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')_addItem()});
     // Focus at end of input if there's a draft value
     if(addNameDraft){nameInput.setSelectionRange(addNameDraft.length,addNameDraft.length);}
@@ -1644,6 +1662,14 @@ window._confirmAdd=()=>{
   setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus()}},30);
 };
 window._cancelAdd=()=>{pendingAdd=null;render();setTimeout(()=>{const e=document.getElementById('new-name');if(e)e.focus()},30)};
+// Add-box autocomplete: pick an existing item (toggles it on), or create via the normal add path.
+window._pickAddSuggestion=id=>{
+  if(!list)return;const it=list.items.find(i=>i.id===id);if(!it)return;
+  it.needed=true;addNameDraft='';pendingAdd=null;
+  persistList();render();
+  setTimeout(()=>{const e=document.getElementById('new-name');if(e){e.value='';e.focus();}},30);
+};
+window._createFromAdd=()=>{_addItem();};
 
 /* ══════════════════════════════════════
    MEAL PLANNING
