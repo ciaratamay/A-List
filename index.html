@@ -1428,12 +1428,13 @@ function renderModal(){
       <h3>Edit Meal Icons <button class="modal-close" onclick="_closeManageModal()">✕</button></h3>
       <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Icon tags for meals (e.g. 👶 Child friendly). These aren't reordered — use Sort or Filter to surface them.</p>
       <div>${rows||'<span style="font-size:13px;color:var(--muted)">No icon tags yet</span>'}</div>
-      <div class="manage-row" style="margin-top:12px"><input class="manage-input" id="new-icon-emoji" placeholder="🙂" style="flex:0 0 56px;text-align:center" autocomplete="off"><input class="manage-input" id="new-icon-label" placeholder="Label e.g. Child friendly" autocomplete="off"><button class="manage-btn" id="add-icon-btn">Add</button></div>
+      <div class="manage-row" style="margin-top:12px;flex-wrap:wrap"><input class="manage-input" id="new-icon-emoji" placeholder="🙂" style="flex:0 0 52px;min-width:0;text-align:center" autocomplete="off"><input class="manage-input" id="new-icon-label" placeholder="Label e.g. Child friendly" style="flex:1;min-width:0" autocomplete="off"><button class="manage-btn" id="add-icon-btn">Add</button></div>
       ${undoBtn}
     </div></div>`;
     mbgClose('_closeManageModal()');
     document.getElementById('add-icon-btn')?.addEventListener('click',_addMealIcon);
     document.getElementById('new-icon-label')?.addEventListener('keydown',e=>{if(e.key==='Enter')_addMealIcon()});
+    document.getElementById('new-icon-emoji')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('new-icon-label')?.focus()});
     return;
   }
 
