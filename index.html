@@ -454,7 +454,7 @@ function makeEmptyList(name,localId){
     localId,name,listId:null,pw:null,pwHint:null,isShared:false,
     items:DEFAULT_ITEMS.map(i=>({...i})),
     shopTabs:DEFAULT_SHOPS.map(s=>({...s})),
-    cats:DEFAULT_CATS.slice(),todoItems:[],meals:[],mealCats:[],
+    cats:DEFAULT_CATS.slice(),todoItems:[],meals:[],mealCats:[],mealIcons:[],
     nextId:DEFAULT_ITEMS.length+1,nextTodoId:1,nextMealId:1
   };
 }
@@ -464,7 +464,7 @@ function loadListFromStorage(localId){
   if(!meta)return null;
   const data=ls('sl_list_'+localId,null);
   if(!data)return null;
-  return {...meta,...data,cats:normCats(data.cats),meals:data.meals||[],mealCats:data.mealCats||[],nextMealId:data.nextMealId||((data.meals&&data.meals.length)?Math.max(...data.meals.map(m=>m.id||0))+1:1)};
+  return {...meta,...data,cats:normCats(data.cats),meals:data.meals||[],mealCats:data.mealCats||[],mealIcons:data.mealIcons||[],nextMealId:data.nextMealId||((data.meals&&data.meals.length)?Math.max(...data.meals.map(m=>m.id||0))+1:1)};
 }
 
 function persistList(){
@@ -475,7 +475,7 @@ function persistList(){
   if(idx>=0)allLists[idx]=meta;else allLists.push(meta);
   ss('sl_all_lists',allLists);
   ss('sl_active_local',localId);
-  ss('sl_list_'+localId,{items,shopTabs,cats,todoItems,meals:list.meals||[],mealCats:list.mealCats||[],nextId,nextTodoId,nextMealId:list.nextMealId||1});
+  ss('sl_list_'+localId,{items,shopTabs,cats,todoItems,meals:list.meals||[],mealCats:list.mealCats||[],mealIcons:list.mealIcons||[],nextId,nextTodoId,nextMealId:list.nextMealId||1});
   if(isShared&&listId&&!isSyncingFromRemote)pushToFirestore();
 }
 
@@ -510,7 +510,9 @@ function resetUIState(){
   undoStack=[];modal=null;burgerOpen=false;confirmTodoDel=null;
   modal_deleteLocalId=null;modal_extra=null;
   confirmMealOff=null;confirmMealDel=null;mealNameDraft='';lastMealIngFocus=null;
-  mealSort='cat';mealSortMenuOpen=false;mealAdvOpen=null;
+  mealSort='cat';mealSortMenuOpen=false;mealAdvOpen=null;mealSortIcon=null;
+  mealFilter=null;mealFilterMenuOpen=false;
+  editMealId=null;mealEditDraft=null;
 }
 
 /* ── ONE-TIME MIGRATION FROM OLD SINGLE-LIST FORMAT ── */
@@ -540,7 +542,7 @@ function resetUIState(){
       existing.push(meta);
       localStorage.setItem('sl_all_lists', JSON.stringify(existing));
       localStorage.setItem('sl_list_'+localId, JSON.stringify({
-        items, shopTabs:finalShops, cats:normCatsMig, todoItems, meals:[], mealCats:[], nextId, nextTodoId, nextMealId:1
+        items, shopTabs:finalShops, cats:normCatsMig, todoItems, meals:[], mealCats:[], mealIcons:[], nextId, nextTodoId, nextMealId:1
       }));
     }
     localStorage.setItem('sl_migrated_v2','1');
@@ -568,7 +570,7 @@ async function derivePath(listId,pw){
 
 function firestorePayload(){
   if(!list)return{};
-  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals||[],mealCats:list.mealCats||[],nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1,updatedAt:Date.now(),name:list.name};
+  return{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals||[],mealCats:list.mealCats||[],mealIcons:list.mealIcons||[],nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1,updatedAt:Date.now(),name:list.name};
 }
 
 async function pushToFirestore(){
@@ -602,10 +604,11 @@ async function subscribeFirestore(){
     if(d.todoItems!==undefined)list.todoItems=d.todoItems;
     if(d.meals!==undefined)list.meals=d.meals;
     if(d.mealCats!==undefined)list.mealCats=d.mealCats;
+    if(d.mealIcons!==undefined)list.mealIcons=d.mealIcons;
     if(d.nextId!==undefined)list.nextId=d.nextId;
     if(d.nextTodoId!==undefined)list.nextTodoId=d.nextTodoId;
     if(d.nextMealId!==undefined)list.nextMealId=d.nextMealId;
-    ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals||[],mealCats:list.mealCats||[],nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1});
+    ss('sl_list_'+list.localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals||[],mealCats:list.mealCats||[],mealIcons:list.mealIcons||[],nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1});
     syncStatus='live';isSyncingFromRemote=false;render();
   },err=>{console.error(err);syncStatus='error';renderSyncBar();});
 }
@@ -632,11 +635,11 @@ async function doJoinSharedList(listId,password){
   const name=data.name||listId;
   list={localId,name,listId,pw:password,pwHint:null,isShared:true,
     items:data.items||[],shopTabs:data.shopTabs||DEFAULT_SHOPS.map(s=>({...s})),
-    cats:normCats(data.cats||[]),todoItems:data.todoItems||[],meals:data.meals||[],mealCats:data.mealCats||[],
+    cats:normCats(data.cats||[]),todoItems:data.todoItems||[],meals:data.meals||[],mealCats:data.mealCats||[],mealIcons:data.mealIcons||[],
     nextId:data.nextId||1,nextTodoId:data.nextTodoId||1,nextMealId:data.nextMealId||1};
   allLists.push({localId,name,listId,pw:password,pwHint:null,isShared:true,lastOpened:Date.now()});
   ss('sl_all_lists',allLists);
-  ss('sl_list_'+localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals,mealCats:list.mealCats,nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId});
+  ss('sl_list_'+localId,{items:list.items,shopTabs:list.shopTabs,cats:list.cats,todoItems:list.todoItems,meals:list.meals,mealCats:list.mealCats,mealIcons:list.mealIcons,nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId});
   activeLocalId=localId;ss('sl_active_local',localId);
   resetUIState();subscribeFirestore();render();
 }
@@ -647,12 +650,12 @@ async function doJoinSharedList(listId,password){
 let undoStack=[];
 function pushUndo(label){
   if(!list)return;
-  undoStack=[{label,items:clone(list.items),shopTabs:clone(list.shopTabs),cats:clone(list.cats),todoItems:clone(list.todoItems),meals:clone(list.meals||[]),mealCats:clone(list.mealCats||[])}];
+  undoStack=[{label,items:clone(list.items),shopTabs:clone(list.shopTabs),cats:clone(list.cats),todoItems:clone(list.todoItems),meals:clone(list.meals||[]),mealCats:clone(list.mealCats||[]),mealIcons:clone(list.mealIcons||[])}];
 }
 function popUndo(){
   if(!list||!undoStack.length)return;
   const snap=undoStack.pop();
-  list.items=snap.items;list.shopTabs=snap.shopTabs;list.cats=snap.cats;list.todoItems=snap.todoItems;list.meals=snap.meals||[];list.mealCats=snap.mealCats||[];
+  list.items=snap.items;list.shopTabs=snap.shopTabs;list.cats=snap.cats;list.todoItems=snap.todoItems;list.meals=snap.meals||[];list.mealCats=snap.mealCats||[];list.mealIcons=snap.mealIcons||[];
   list.nextId=Math.max(0,...list.items.map(i=>i.id))+1;
   list.nextTodoId=Math.max(0,...(list.todoItems.map(t=>t.id||0)||[0]))+1;
   list.nextMealId=(list.meals.length?Math.max(...list.meals.map(m=>m.id||0)):0)+1;
@@ -676,7 +679,9 @@ let shopOnlyFilter=ls('sl_shop_only',{});
 let mealOnlyFilter=ls('sl_meal_only',false);
 // Meal-planning transient UI state
 let confirmMealOff=null,confirmMealDel=null,mealNameDraft='',lastMealIngFocus=null;
-let mealSort='cat',mealSortMenuOpen=false,mealAdvOpen=null;
+let mealSort='cat',mealSortMenuOpen=false,mealAdvOpen=null,mealSortIcon=null;
+let mealFilter=null,mealFilterMenuOpen=false;
+let editMealId=null,mealEditDraft=null;
 
 /* ══════════════════════════════════════
    ACCESSORS
@@ -705,6 +710,7 @@ function itemVisibleInTab(item,tabId){
 function neededCount(tabId){if(!list||tabId==='todo')return 0;return list.items.filter(i=>itemInTab(i,tabId)&&i.needed).length;}
 function catList(){return list&&list.cats.length?list.cats:DEFAULT_CATS.slice()}
 function mealById(id){return (list&&list.meals||[]).find(m=>m.id===id);}
+function mealIconById(id){return (list&&list.mealIcons||[]).find(ic=>ic.id===id);}
 function itemInActiveMeal(item){return (item.meals||[]).some(mid=>{const m=mealById(mid);return m&&m.needed;});}
 function mealTitles(item){return (item.meals||[]).map(mid=>mealById(mid)).filter(m=>m&&m.needed).map(m=>m.name).join(', ');}
 
@@ -925,31 +931,71 @@ function renderMealsBody(el){
   const namedCats=(list.mealCats||[]).filter(c=>c&&c!=='Uncategorised');
   const undoBtn=undoStack.length?`<button class="tool-btn undo" onclick="_doUndo()">↩ Undo</button>`:'';
   let h='';
-  h+=`<div class="meal-add-area"><input class="add-input" id="meal-new" placeholder="Add a meal…" type="text" autocomplete="off" value="${escAttr(mealNameDraft)}"><button class="add-ok" id="meal-add-btn">+</button></div>`;
-  const sortLabel=mealSort==='az'?'A–Z':'By category';
+  const newCatOpts=['Uncategorised',...namedCats].map((c,i)=>`<option${i===0?' selected':''}>${escHtml(c)}</option>`).join('');
+  const icons=list.mealIcons||[];
+  const newIconChips=icons.map(ic=>`<span class="add-sc" data-icon="${escAttr(ic.id)}">${escHtml(ic.emoji)} ${escHtml(ic.label)}</span>`).join('');
+  h+=`<div class="meal-add-area" style="flex-wrap:wrap"><input class="add-input" id="meal-new" placeholder="Add a meal…" type="text" autocomplete="off" value="${escAttr(mealNameDraft)}">${namedCats.length?`<select class="cat-sel" id="meal-new-cat">${newCatOpts}</select>`:''}<button class="add-ok" id="meal-add-btn">+</button>${icons.length?`<div class="add-shop-row" id="meal-new-icons" style="flex-basis:100%">${newIconChips}</div>`:''}</div>`;
+  let sortLabel='By category';
+  if(mealSort==='az')sortLabel='A–Z';
+  else if(mealSort==='icon'){const ic=mealIconById(mealSortIcon);sortLabel=ic?ic.emoji+' first':'By category';}
+  let filterLabel='All';
+  if(mealFilter){if(mealFilter.type==='cat')filterLabel=mealFilter.value;else{const ic=mealIconById(mealFilter.value);filterLabel=ic?ic.emoji:'Icon';}}
+  const sortIconOpts=icons.map(ic=>`<div class="sort-option${(mealSort==='icon'&&mealSortIcon===ic.id)?' active-sort':''}" onclick="_setMealSort('icon','${ic.id}')"><span class="sort-check">${(mealSort==='icon'&&mealSortIcon===ic.id)?'✓':''}</span>${escHtml(ic.emoji)} ${escHtml(ic.label)} first</div>`).join('');
+  const filterCatOpts=[...namedCats,'Uncategorised'].map(c=>`<div class="sort-option${(mealFilter&&mealFilter.type==='cat'&&mealFilter.value===c)?' active-sort':''}" onclick="_setMealFilter('cat','${encodeURIComponent(c)}')"><span class="sort-check">${(mealFilter&&mealFilter.type==='cat'&&mealFilter.value===c)?'✓':''}</span>${escHtml(c)}</div>`).join('');
+  const filterIconOpts=icons.map(ic=>`<div class="sort-option${(mealFilter&&mealFilter.type==='icon'&&mealFilter.value===ic.id)?' active-sort':''}" onclick="_setMealFilter('icon','${ic.id}')"><span class="sort-check">${(mealFilter&&mealFilter.type==='icon'&&mealFilter.value===ic.id)?'✓':''}</span>${escHtml(ic.emoji)} ${escHtml(ic.label)}</div>`).join('');
   h+=`<div class="toolbar">
     <div class="sort-wrap">
-      <button class="sort-dropdown-btn" onclick="_toggleMealSortMenu()">Sort: ${sortLabel} <span class="sort-arrow">▾</span></button>
+      <button class="sort-dropdown-btn" onclick="_toggleMealSortMenu()">Sort: ${escHtml(sortLabel)} <span class="sort-arrow">▾</span></button>
       ${mealSortMenuOpen?`<div class="sort-menu">
         <div class="sort-option${mealSort==='cat'?' active-sort':''}" onclick="_setMealSort('cat')"><span class="sort-check">${mealSort==='cat'?'✓':''}</span>By category</div>
         <div class="sort-option${mealSort==='az'?' active-sort':''}" onclick="_setMealSort('az')"><span class="sort-check">${mealSort==='az'?'✓':''}</span>A–Z</div>
+        ${sortIconOpts}
       </div>`:''}
     </div>
+    <div class="sort-wrap">
+      <button class="sort-dropdown-btn" onclick="_toggleMealFilterMenu()">Filter: ${escHtml(filterLabel)} <span class="sort-arrow">▾</span></button>
+      ${mealFilterMenuOpen?`<div class="sort-menu">
+        <div class="sort-option${!mealFilter?' active-sort':''}" onclick="_setMealFilter(null)"><span class="sort-check">${!mealFilter?'✓':''}</span>All meals</div>
+        ${filterCatOpts}${filterIconOpts}
+      </div>`:''}
+    </div>
+    <button class="tool-btn muted" onclick="_openManage('manage-meal-cats')">Edit categories</button>
+    <button class="tool-btn muted" onclick="_openManage('manage-meal-icons')">Edit icons</button>
     ${undoBtn}
   </div>`;
+  const byName=(a,b)=>a.name.localeCompare(b.name);
+  const catGroups=(set)=>{
+    let s='';
+    [...namedCats,'Uncategorised'].forEach(cat=>{
+      const isUncat=cat==='Uncategorised';
+      const inCat=set.filter(m=>{const mc=m.cat||'Uncategorised';return isUncat?(mc==='Uncategorised'||!namedCats.includes(mc)):mc===cat;}).slice().sort(byName);
+      if(!inCat.length)return;
+      s+=`<div class="sec-head">${escHtml(cat)}</div>`;
+      inCat.forEach(m=>{s+=mealBlockHtml(m,namedCats);});
+    });
+    return s;
+  };
   if(!meals.length){
     h+=`<div class="empty">No meals yet. Add a meal above, then add its ingredients.</div>`;
-  } else if(mealSort==='az'){
-    meals.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(m=>{h+=mealBlockHtml(m,namedCats);});
   } else {
-    const groups=[...namedCats,'Uncategorised'];
-    groups.forEach(cat=>{
-      const isUncat=cat==='Uncategorised';
-      const inCat=meals.filter(m=>{const mc=m.cat||'Uncategorised';return isUncat?(mc==='Uncategorised'||!namedCats.includes(mc)):mc===cat;}).slice().sort((a,b)=>a.name.localeCompare(b.name));
-      if(!inCat.length)return;
-      h+=`<div class="sec-head">${escHtml(cat)}</div>`;
-      inCat.forEach(m=>{h+=mealBlockHtml(m,namedCats);});
-    });
+    let working=meals.slice();
+    if(mealFilter){
+      if(mealFilter.type==='cat'){const c=mealFilter.value;working=working.filter(m=>{const mc=m.cat||'Uncategorised';return c==='Uncategorised'?(mc==='Uncategorised'||!namedCats.includes(mc)):mc===c;});}
+      else if(mealFilter.type==='icon'){working=working.filter(m=>(m.icons||[]).includes(mealFilter.value));}
+    }
+    if(!working.length){
+      h+=`<div class="empty">No meals match this filter.</div>`;
+    } else if(mealSort==='az'){
+      working.slice().sort(byName).forEach(m=>{h+=mealBlockHtml(m,namedCats);});
+    } else if(mealSort==='icon'&&mealSortIcon){
+      const ic=mealIconById(mealSortIcon);
+      const withIcon=working.filter(m=>(m.icons||[]).includes(mealSortIcon)).slice().sort(byName);
+      const rest=working.filter(m=>!(m.icons||[]).includes(mealSortIcon));
+      if(withIcon.length){h+=`<div class="sec-head">${ic?escHtml(ic.emoji+' '+ic.label):'Selected'}</div>`;withIcon.forEach(m=>{h+=mealBlockHtml(m,namedCats);});}
+      h+=catGroups(rest);
+    } else {
+      h+=catGroups(working);
+    }
   }
   el.innerHTML=h;
   const mn=document.getElementById('meal-new');
@@ -959,20 +1005,38 @@ function renderMealsBody(el){
     if(mealNameDraft)mn.setSelectionRange(mealNameDraft.length,mealNameDraft.length);
   }
   document.getElementById('meal-add-btn')?.addEventListener('click',_addMeal);
+  // Wire icon chips in the add area (for setting icons at creation)
+  document.querySelectorAll('#meal-new-icons .add-sc').forEach(ch=>ch.addEventListener('click',()=>ch.classList.toggle('on')));
   wireMealInputs();
+  if(editMealId!=null){const en=document.getElementById('me-name');if(en){en.focus();en.select();}}
+  // Ingredient edit panel uses the shared item editor (ep-name/ep-cat)
+  if(editId!==null){
+    const en=document.getElementById('ep-name'),ec=document.getElementById('ep-cat');
+    if(en){en.focus();en.select();en.addEventListener('input',e=>{editDraft.name=e.target.value});}
+    if(ec)ec.addEventListener('change',e=>{editDraft.cat=e.target.value});
+  }
   if(lastMealIngFocus!=null){const f=document.getElementById('ing-inp-'+lastMealIngFocus);if(f)f.focus();lastMealIngFocus=null;}
 }
 
 function mealBlockHtml(m,namedCats){
   const ings=list.items.filter(i=>(i.meals||[]).includes(m.id)).slice().sort((a,b)=>a.name.localeCompare(b.name));
   const bg=m.needed?'var(--accent)':'var(--muted)';
-  let catSel='';
-  if(namedCats.length){
-    const opts=['Uncategorised',...namedCats].map(c=>`<option${(m.cat||'Uncategorised')===c?' selected':''}>${escHtml(c)}</option>`).join('');
-    catSel=`<select class="cat-sel" onchange="_setMealCat(${m.id},this.value)">${opts}</select>`;
-  }
+  const catTagInner=(m.cat&&m.cat!=='Uncategorised')?`<span class="shop-tag">${escHtml(m.cat)}</span>`:'';
+  const iconTags=(m.icons||[]).map(id=>{const ic=mealIconById(id);return ic?`<span class="shop-tag">${escHtml(ic.emoji)} ${escHtml(ic.label)}</span>`:'';}).join('');
+  const tagsRow=(catTagInner||iconTags)?`<div class="shop-tags">${catTagInner}${iconTags}</div>`:'';
   let h=`<div class="meal-block">`;
-  h+=`<div class="meal-head"><span class="meal-title${m.needed?'':' off'}">${escHtml(m.name)}</span>${catSel}<button class="toggle${m.needed?' on':''}" style="background:${bg}" onclick="_toggleMeal(${m.id})"></button><button class="icon-btn" onclick="_askDeleteMeal(${m.id})">✕</button></div>`;
+  h+=`<div class="meal-head"><div class="item-info"><div class="meal-title${m.needed?'':' off'}">${escHtml(m.name)}</div>${tagsRow}</div><button class="toggle${m.needed?' on':''}" style="background:${bg}" onclick="_toggleMeal(${m.id})"></button><button class="icon-btn" onclick="_openMealEdit(${m.id})">✎</button><button class="icon-btn" onclick="_askDeleteMeal(${m.id})">✕</button></div>`;
+  if(editMealId===m.id&&mealEditDraft){
+    const opts=['Uncategorised',...namedCats].map(c=>`<option${mealEditDraft.cat===c?' selected':''}>${escHtml(c)}</option>`).join('');
+    const mIcons=list.mealIcons||[];
+    const iconChips=mIcons.map(ic=>`<span class="sc${(mealEditDraft.icons||[]).includes(ic.id)?' on':''}" onclick="_toggleMealEditIcon('${ic.id}')">${escHtml(ic.emoji)} ${escHtml(ic.label)}</span>`).join('');
+    h+=`<div class="edit-panel">
+      <div class="edit-label">Name</div><input class="edit-input" id="me-name" value="${escAttr(mealEditDraft.name)}" style="margin-bottom:12px">
+      <div class="edit-label">Category</div><select class="edit-input" id="me-cat" style="margin-bottom:12px">${opts}</select>
+      ${mIcons.length?`<div class="edit-label" style="margin-bottom:6px">Icon tags</div><div class="shop-checks">${iconChips}</div>`:''}
+      <div style="display:flex;gap:10px"><button class="edit-save" onclick="_saveMealEdit()">Save</button><button class="edit-cancel" onclick="_closeMealEdit()">Cancel</button></div>
+    </div>`;
+  }
   if(confirmMealDel===m.id){
     h+=`<div class="confirm-row"><span class="confirm-msg">Remove "${escHtml(m.name)}"? Its ingredients stay on your list.</span><button class="cy" onclick="_doDeleteMeal(${m.id})">Remove</button><button class="cn" onclick="_cancelConfirm()">Cancel</button></div>`;
   }
@@ -995,7 +1059,9 @@ function mealBlockHtml(m,namedCats){
   } else {
     ings.forEach(i=>{
       const ibg=i.needed?'var(--accent)':'var(--muted)';
-      h+=`<div class="meal-ing-row"><span class="meal-ing-name${i.needed?' needed':''}">${escHtml(i.name)}</span><button class="toggle${i.needed?' on':''}" style="background:${ibg}" onclick="_toggleItem(${i.id})"></button><button class="icon-btn" onclick="_mealRemoveItem(${m.id},${i.id})" title="Remove from meal">✕</button></div>`;
+      const tags=i.shops.length?`<div class="shop-tags">${i.shops.map(s=>{const t=tabById(s);return t?`<span class="shop-tag">${escHtml(t.label)}</span>`:''}).join('')}</div>`:'';
+      h+=`<div class="meal-ing-row"${editId===i.id?' id="edit-anchor"':''}><div class="item-info"><div class="meal-ing-name${i.needed?' needed':''}">${escHtml(i.name)}</div>${tags}</div><button class="toggle${i.needed?' on':''}" style="background:${ibg}" onclick="_toggleItem(${i.id})"></button><button class="icon-btn" onclick="_openEdit(${i.id})">✎</button><button class="icon-btn" onclick="_mealRemoveItem(${m.id},${i.id})" title="Remove from meal">✕</button></div>`;
+      if(editId===i.id&&editDraft)h+=itemEditPanelHtml();
     });
   }
   h+=`</div>`;
@@ -1069,18 +1135,22 @@ function rowHtml(item){
     const starOn=!!item.starred;
     h+=`<div class="item-row"${editId===item.id?' id="edit-anchor"':''}><div class="item-info"><div class="item-name${item.needed?' needed':''}">${escHtml(item.name)}</div>${tagsHtml}</div><button class="toggle${item.needed?' on':''}" style="background:${bg}" onclick="_toggleItem(${item.id})"></button><button class="icon-btn star-btn${starOn?' on':''}" onclick="_toggleStar(${item.id})" title="${starOn?'Unstar':'Star'}">${starOn?'★':'☆'}</button>${itemInActiveMeal(item)?`<span class="meal-indicator" title="${escAttr(mealTitles(item))}">${plateIcon()}</span>`:''}<button class="icon-btn" onclick="_openEdit(${item.id})">✎</button><button class="icon-btn" onclick="_askDelete(${item.id})">✕</button></div>`;
   }
-  if(editId===item.id&&editDraft){
-    const co=catList().map(c=>`<option${c===editDraft.cat?' selected':''}>${escHtml(c)}</option>`).join('');
-    const sc=list.shopTabs.map(t=>`<span class="sc${editDraft.shops.includes(t.id)?' on':''}" onclick="_toggleDraftShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
-    h+=`<div class="edit-panel">
-      <div class="edit-label">Name</div><input class="edit-input" id="ep-name" value="${escAttr(editDraft.name)}" style="margin-bottom:12px">
-      <div class="edit-label">Category</div><select class="edit-input" id="ep-cat" style="margin-bottom:12px">${co}</select>
-      <div class="edit-label" style="margin-bottom:6px">Shops (blank = everywhere)</div>
-      <div class="shop-checks">${sc}</div>
-      <div style="display:flex;gap:10px"><button class="edit-save" onclick="_saveEdit()">Save</button><button class="edit-cancel" onclick="_closeEdit()">Cancel</button></div>
-    </div>`;
-  }
+  if(editId===item.id&&editDraft){h+=itemEditPanelHtml();}
   return h;
+}
+
+// Shared item edit panel (used by the main list rows and the meal-tab ingredient rows)
+function itemEditPanelHtml(){
+  if(!editDraft)return'';
+  const co=catList().map(c=>`<option${c===editDraft.cat?' selected':''}>${escHtml(c)}</option>`).join('');
+  const sc=list.shopTabs.map(t=>`<span class="sc${editDraft.shops.includes(t.id)?' on':''}" onclick="_toggleDraftShop('${t.id}')">${escHtml(t.label)}</span>`).join('');
+  return`<div class="edit-panel">
+    <div class="edit-label">Name</div><input class="edit-input" id="ep-name" value="${escAttr(editDraft.name)}" style="margin-bottom:12px">
+    <div class="edit-label">Category</div><select class="edit-input" id="ep-cat" style="margin-bottom:12px">${co}</select>
+    <div class="edit-label" style="margin-bottom:6px">Shops (blank = everywhere)</div>
+    <div class="shop-checks">${sc}</div>
+    <div style="display:flex;gap:10px"><button class="edit-save" onclick="_saveEdit()">Save</button><button class="edit-cancel" onclick="_closeEdit()">Cancel</button></div>
+  </div>`;
 }
 
 function catBlock(byCat){
@@ -1345,6 +1415,28 @@ function renderModal(){
     return;
   }
 
+  if(modal==='manage-meal-icons'){
+    const icons=(list.mealIcons||[]);
+    const rows=icons.map(ic=>{
+      if(confirmDelete&&confirmDelete.type==='mealicon'&&confirmDelete.id===ic.id){
+        return`<div class="shop-drag-row" style="background:#5a1a1a;border-color:var(--accent-red)"><span style="color:#ffcccc;font-size:13px;flex:1">Remove ${escHtml(ic.emoji+' '+ic.label)}?</span><button class="cy" style="padding:3px 8px;font-size:12px" onclick="_doDeleteMealIcon('${ic.id}')">Yes</button><button class="cn" style="padding:3px 8px;font-size:12px" onclick="_cancelConfirm()">No</button></div>`;
+      }
+      return`<div class="shop-drag-row"><span class="shop-drag-label">${escHtml(ic.emoji)} ${escHtml(ic.label)}</span><button class="chip-del" onclick="_askDeleteMealIcon('${ic.id}')">✕</button></div>`;
+    }).join('');
+    const undoBtn=undoStack.length?`<button class="m-btn amber" style="margin-top:12px" onclick="_doUndo();_closeManageModal()">↩ Undo</button>`:'';
+    el.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">
+      <h3>Edit Meal Icons <button class="modal-close" onclick="_closeManageModal()">✕</button></h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Icon tags for meals (e.g. 👶 Child friendly). These aren't reordered — use Sort or Filter to surface them.</p>
+      <div>${rows||'<span style="font-size:13px;color:var(--muted)">No icon tags yet</span>'}</div>
+      <div class="manage-row" style="margin-top:12px"><input class="manage-input" id="new-icon-emoji" placeholder="🙂" style="flex:0 0 56px;text-align:center" autocomplete="off"><input class="manage-input" id="new-icon-label" placeholder="Label e.g. Child friendly" autocomplete="off"><button class="manage-btn" id="add-icon-btn">Add</button></div>
+      ${undoBtn}
+    </div></div>`;
+    mbgClose('_closeManageModal()');
+    document.getElementById('add-icon-btn')?.addEventListener('click',_addMealIcon);
+    document.getElementById('new-icon-label')?.addEventListener('keydown',e=>{if(e.key==='Enter')_addMealIcon()});
+    return;
+  }
+
   if(modal==='themes'){
     const themes=allThemes();
     // Build theme list
@@ -1484,6 +1576,7 @@ function renderBurger(){
     <div class="burger-item" onclick="_openManage('manage-shops');_closeBurger()"><span class="burger-item-icon">🏪</span><span>Edit shops</span></div>
     <div class="burger-item" onclick="_openManage('manage-cats');_closeBurger()"><span class="burger-item-icon">📋</span><span>Edit categories</span></div>
     <div class="burger-item" onclick="_openManage('manage-meal-cats');_closeBurger()"><span class="burger-item-icon">🏷️</span><span>Edit meal categories</span></div>
+    <div class="burger-item" onclick="_openManage('manage-meal-icons');_closeBurger()"><span class="burger-item-icon">😀</span><span>Edit meal icons</span></div>
     <div class="burger-item" onclick="_openImport();_closeBurger()"><span class="burger-item-icon">📥</span><span>Import from clipboard</span></div>
     ${hasUndo?`<div class="burger-item" style="color:var(--accent-amber)" onclick="_doUndo();_closeBurger()"><span class="burger-item-icon">↩</span><span>Undo last action</span></div>`:''}
     `:''}
@@ -1502,7 +1595,7 @@ window._setTab=id=>{
   const ne=document.getElementById('new-name');if(ne)addNameDraft=ne.value;
   activeTab=id;confirmId=null;confirmClear=false;confirmDelete=null;
   editId=null;editDraft=null;pendingAdd=null;sortMenuOpen=false;
-  confirmMealOff=null;confirmMealDel=null;mealSortMenuOpen=false;mealAdvOpen=null;
+  confirmMealOff=null;confirmMealDel=null;mealSortMenuOpen=false;mealFilterMenuOpen=false;mealAdvOpen=null;editMealId=null;mealEditDraft=null;
   addNameDraft='';
   const t=tabById(id);
   addDraftShops=(t&&t.type==='shop')?[id]:[];
@@ -1530,7 +1623,7 @@ window._doNewList=()=>{
   const newList=makeEmptyList(name,localId);
   allLists.push({localId,name,listId:null,pw:null,pwHint:null,isShared:false,lastOpened:Date.now()});
   ss('sl_all_lists',allLists);
-  ss('sl_list_'+localId,{items:newList.items,shopTabs:newList.shopTabs,cats:newList.cats,todoItems:newList.todoItems,meals:newList.meals,mealCats:newList.mealCats,nextId:newList.nextId,nextTodoId:newList.nextTodoId,nextMealId:newList.nextMealId});
+  ss('sl_list_'+localId,{items:newList.items,shopTabs:newList.shopTabs,cats:newList.cats,todoItems:newList.todoItems,meals:newList.meals,mealCats:newList.mealCats,mealIcons:newList.mealIcons,nextId:newList.nextId,nextTodoId:newList.nextTodoId,nextMealId:newList.nextMealId});
   if(firestoreUnsub){firestoreUnsub();firestoreUnsub=null;}
   syncStatus='off';list=newList;activeLocalId=localId;ss('sl_active_local',localId);
   resetUIState();render();
@@ -1544,10 +1637,10 @@ window._doCopyList=()=>{
   const localId='list_'+Date.now();
   const copy={localId,name,listId:null,pw:null,pwHint:null,isShared:false,
     items:clone(list.items),shopTabs:clone(list.shopTabs),cats:clone(list.cats),
-    todoItems:clone(list.todoItems),meals:clone(list.meals||[]),mealCats:clone(list.mealCats||[]),nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1};
+    todoItems:clone(list.todoItems),meals:clone(list.meals||[]),mealCats:clone(list.mealCats||[]),mealIcons:clone(list.mealIcons||[]),nextId:list.nextId,nextTodoId:list.nextTodoId,nextMealId:list.nextMealId||1};
   allLists.push({localId,name,listId:null,pw:null,pwHint:null,isShared:false,lastOpened:Date.now()});
   ss('sl_all_lists',allLists);
-  ss('sl_list_'+localId,{items:copy.items,shopTabs:copy.shopTabs,cats:copy.cats,todoItems:copy.todoItems,meals:copy.meals,mealCats:copy.mealCats,nextId:copy.nextId,nextTodoId:copy.nextTodoId,nextMealId:copy.nextMealId});
+  ss('sl_list_'+localId,{items:copy.items,shopTabs:copy.shopTabs,cats:copy.cats,todoItems:copy.todoItems,meals:copy.meals,mealCats:copy.mealCats,mealIcons:copy.mealIcons,nextId:copy.nextId,nextTodoId:copy.nextTodoId,nextMealId:copy.nextMealId});
   if(firestoreUnsub){firestoreUnsub();firestoreUnsub=null;}
   syncStatus='off';list=copy;activeLocalId=localId;ss('sl_active_local',localId);
   resetUIState();render();
@@ -1678,14 +1771,40 @@ window._openMeals=()=>{
   if(!list)return;
   activeTab='meals';
   confirmId=null;confirmClear=false;confirmDelete=null;confirmMealOff=null;confirmMealDel=null;
-  editId=null;editDraft=null;pendingAdd=null;sortMenuOpen=false;mealSortMenuOpen=false;
+  editId=null;editDraft=null;editMealId=null;mealEditDraft=null;pendingAdd=null;sortMenuOpen=false;mealSortMenuOpen=false;mealFilterMenuOpen=false;
   render();
 };
 window._setMealOnly=v=>{mealOnlyFilter=!!v;ss('sl_meal_only',mealOnlyFilter);render();};
-window._toggleMealSortMenu=()=>{mealSortMenuOpen=!mealSortMenuOpen;render();};
-window._setMealSort=s=>{mealSort=s;mealSortMenuOpen=false;render();};
+window._toggleMealSortMenu=()=>{mealSortMenuOpen=!mealSortMenuOpen;mealFilterMenuOpen=false;render();};
+window._setMealSort=(s,iconId)=>{mealSort=s;mealSortIcon=iconId||null;mealSortMenuOpen=false;render();};
+window._toggleMealFilterMenu=()=>{mealFilterMenuOpen=!mealFilterMenuOpen;mealSortMenuOpen=false;render();};
+window._setMealFilter=(type,value)=>{mealFilter=type?{type,value:type==='cat'?decodeURIComponent(value):value}:null;mealFilterMenuOpen=false;render();};
 window._toggleMealAdv=id=>{mealAdvOpen=(mealAdvOpen===id)?null:id;render();};
-window._setMealCat=(id,cat)=>{if(!list)return;const m=(list.meals||[]).find(x=>x.id===id);if(m){m.cat=cat;persistList();render();}};
+window._openMealEdit=id=>{
+  if(!list)return;
+  if(editMealId===id){_closeMealEdit();return;}
+  const m=(list.meals||[]).find(x=>x.id===id);if(!m)return;
+  editMealId=id;mealEditDraft={name:m.name,cat:m.cat||'Uncategorised',icons:[...(m.icons||[])]};
+  confirmMealOff=null;confirmMealDel=null;render();
+};
+window._closeMealEdit=()=>{editMealId=null;mealEditDraft=null;render();};
+window._toggleMealEditIcon=id=>{
+  if(!mealEditDraft)return;
+  const en=document.getElementById('me-name'),ec=document.getElementById('me-cat');
+  if(en)mealEditDraft.name=en.value;if(ec)mealEditDraft.cat=ec.value;
+  if(!mealEditDraft.icons)mealEditDraft.icons=[];
+  mealEditDraft.icons=mealEditDraft.icons.includes(id)?mealEditDraft.icons.filter(x=>x!==id):[...mealEditDraft.icons,id];
+  render();
+};
+window._saveMealEdit=()=>{
+  if(!list||!mealEditDraft)return;
+  const m=(list.meals||[]).find(x=>x.id===editMealId);if(!m)return;
+  const en=document.getElementById('me-name'),ec=document.getElementById('me-cat');
+  m.name=(en?en.value.trim():m.name)||m.name;
+  if(ec)m.cat=ec.value;
+  m.icons=mealEditDraft.icons||[];
+  editMealId=null;mealEditDraft=null;persistList();render();
+};
 
 function _addMeal(){
   if(!list)return;
@@ -1694,7 +1813,10 @@ function _addMeal(){
   if(!list.meals)list.meals=[];
   const id=list.nextMealId||((list.meals.length)?Math.max(...list.meals.map(m=>m.id||0))+1:1);
   list.nextMealId=id+1;
-  list.meals.push({id,name,needed:true,cat:'Uncategorised'});
+  const catEl=document.getElementById('meal-new-cat');
+  const cat=catEl?catEl.value:'Uncategorised';
+  const mIcons=[...document.querySelectorAll('#meal-new-icons .add-sc.on')].map(s=>s.dataset.icon);
+  list.meals.push({id,name,needed:true,cat,icons:mIcons});
   mealNameDraft='';persistList();render();
   setTimeout(()=>{const e=document.getElementById('meal-new');if(e){e.value='';e.focus();}},30);
 }
@@ -1761,6 +1883,26 @@ function _addMealCat(){
   if(list.mealCats.some(c=>c.toLowerCase()===name.toLowerCase()))return;
   list.mealCats.push(name);el.value='';persistList();renderModal();
 }
+function _addMealIcon(){
+  if(!list)return;
+  const eEl=document.getElementById('new-icon-emoji'),lEl=document.getElementById('new-icon-label');
+  const emoji=(eEl?eEl.value:'').trim(),label=(lEl?lEl.value:'').trim();
+  if(!emoji||!label)return;
+  if(!list.mealIcons)list.mealIcons=[];
+  const id='ic_'+Math.random().toString(36).slice(2,8);
+  list.mealIcons.push({id,emoji,label});
+  if(eEl)eEl.value='';if(lEl)lEl.value='';
+  persistList();renderModal();
+}
+window._askDeleteMealIcon=id=>{confirmDelete={type:'mealicon',id};renderModal()};
+window._doDeleteMealIcon=id=>{
+  if(!list)return;pushUndo('Delete meal icon');
+  list.mealIcons=(list.mealIcons||[]).filter(ic=>ic.id!==id);
+  (list.meals||[]).forEach(m=>{if(m.icons)m.icons=m.icons.filter(x=>x!==id);});
+  if(mealSortIcon===id){mealSort='cat';mealSortIcon=null;}
+  if(mealFilter&&mealFilter.type==='icon'&&mealFilter.value===id)mealFilter=null;
+  confirmDelete=null;persistList();renderModal();
+};
 window._askDeleteMealCat=enc=>{confirmDelete={type:'mealcat',id:decodeURIComponent(enc)};renderModal()};
 window._doDeleteMealCat=enc=>{
   if(!list)return;pushUndo('Delete meal category');
